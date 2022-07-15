@@ -1,0 +1,24 @@
+#R basics
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+#no data
+*.csv
+*.txt
+*.rds
+*.xlsx
+*.xls
+*.zip
+*.png
+*.twbx
+*.pptx
+*.Rproj
+
+#nothing from these folders
+AI/*
+GIS/*
+Images/*
+Graphics/*
+Data/*
+Dataout/*
