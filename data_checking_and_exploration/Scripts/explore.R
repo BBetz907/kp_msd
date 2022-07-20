@@ -68,6 +68,7 @@ tst_pos_trends + geom_line(aes(color = indicator)) +
   geom_label(aes(label = sum.results))
 
 # 1c ----------------------------------------------------------------------
+#old code with error
 table(qcheck$indicator)
 sa <- c("Zambia", "Malawi", "Botswana")
 pvls_trends_country <- qcheck %>% filter(country %in% sa, disagg == "KP",
@@ -80,6 +81,17 @@ pvls_trends_country +
   geom_line(aes(color = country)) +
   geom_label(aes(label = sum.results))
 
+#fixed
+table(qcheck$indicator)
+sa <- c("Zambia", "Malawi", "Botswana")
+pvls_trends_country <- qcheck %>% filter(country %in% sa, disagg == "KP",
+                                         results!=0, indicator == "TX_PVLS_D") %>%
+  group_by(fyq, country, indicator) %>%
+  summarise(sum.results=sum(results))
+
+ggplot(pvls_trends_country, aes(x = fyq, y = sum.results, group=country)) +
+  geom_line(aes(color = country)) +
+  geom_label(aes(label = sum.results)) + facet_grid(~indicator)
 # 1d ----------------------------------------------------------------------
 measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
 
@@ -168,7 +180,7 @@ prep <- qcheck %>% filter(funding_agency == "USAID", country == "Malawi", disagg
 
 prep %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line() +
   geom_label(aes(label = sum.results))
-
+#this one does not have anything on the plot
 
 # 3 achievement ----------------------------------------------------------------------
 ach_country <- check %>% filter(fy == 2022, funding_agency %in% usaid_cdc, country == "Laos", disagg == "KP") %>%
@@ -180,6 +192,7 @@ ach_country <- check %>% filter(fy == 2022, funding_agency %in% usaid_cdc, count
 ach_country$indicator <- factor(ach_country$indicator,
                                       levels = c("KP_PREV", "HTS_SELF", "HTS_TST", "HTS_TST_POS", "TX_NEW",
                                                  "TX_CURR", "TX_PVLS_D", "TX_PVLS_N", "PrEP_NEW", "PrEP_CURR", "PrEP_CT"))
+
 library(gt)
 
 ach_country %>%
@@ -345,7 +358,7 @@ tx <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal",
 
 
 tx %>%   arrange(desc(TX_CURR)) %>%
-  gt() %>%
+  gt() %>% 
   cols_align(
     align = "left",
     columns = psnu
