@@ -251,7 +251,7 @@ cascade <- check %>% filter(fy == "2021", disagg == "KP", country == "Botswana",
   mutate(ach = sum.cum/sum.targets) %>%
   ggplot2::ggplot(aes(x = indicator, y = sum.cum, fill = factor(fy)))
 
-cascade + geom_col(aes(y = sum.targets, fill= "Target")) + geom_col(aes(y=sum.cum, fill= "Cumulative"), width = 0.75) + si_style()
+cascade + geom_col(aes(y = sum.targets, fill= "Target")) + geom_col(aes(y=sum.cum, fill= "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + scale_fill_discrete(labels = c("Achievement", "Cumulative", "Target"))+ si_style()
 ```
 2. TX_PVLS (D) an (N) bar chart by quarter - 1 country - choose other filters, labels 
 
@@ -262,8 +262,7 @@ measure_trends_tx_pvls_bots <- qcheck %>% filter(country == "Botswana", disagg =
   group_by(fyq, country, indicator) %>%
   summarise(sum.results=sum(results))
 
-ggplot(measure_trends_tx_pvls_bots, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style()
-
+ggplot(measure_trends_tx_pvls_bots, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) +  si_style()
 ```
 
 3. Scatter plot of VLC and VLS, each shape is a PSNU - 1 country, FY22 cumulative - choose other filters, labels (New)
@@ -280,26 +279,27 @@ measure_trends_bots <- check %>% filter(country == "Botswana", disagg == "KP", c
          vlc = TX_PVLS_D/TX_CURR_Lag2,
          linkage = TX_NEW/HTS_TST_POS) %>% na.omit()
 
-#note: no dedup data here, but some dedup data in dashboard
-
-#include psnu, geom_scatter
-#filter by each fy, use the last quarter in each
-#use check instead of qcheck
-#fy22 q2
-
-measure_trends_bots %>% ggplot2::ggplot(aes(x = TX_PVLS_D, y = TX_PVLS_N, color = psnu)) + geom_point(size = 4) + si_style()
+measure_trends_bots %>% ggplot2::ggplot(aes(x = TX_PVLS_D, y = TX_PVLS_N, color = psnu)) + geom_point(size = 4) +  si_style()
 measure_trends_bots %>% ggplot2::ggplot(aes(x = TX_CURR_Lag2, y = TX_PVLS_D, color = psnu)) + geom_point(size = 4) + si_style()
 
-measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vlc, color = psnu)) + geom_point(size = 4) + si_style()
-measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vls, color = psnu)) + geom_point(size = 4) + si_style()
+measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vlc)) + geom_point(size = 4) + si_style()
+measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vls)) + geom_point(size = 4) + si_style()
 
 ```
 
 4. Scatter plot of HTS_TST_POS and TX_NEW  label marks with Key Population and "Proxy Linkage" calculation (TX_NEW/HTS_TST_POS) - 1 country, FY22 cumulative - choose other filters, labels (New)
 
 ```{r}
-measure_trends_bots %>% ggplot2::ggplot(aes(x = HTS_TST_POS, y = TX_NEW, color = psnu)) + geom_point(size = 4) + si_style()
-measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = linkage, color = psnu)) + geom_point(size = 4) + si_style()
+linkage_zim <- check %>% filter(country == "Zimbabwe", disagg == "KP", cumulative!=0, indicator %in% measure_indicators, fy == 2022) %>%
+  group_by(fy, country, indicator, keypop) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(values_from = sum.cumulative, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% na.omit()
+
+linkage_zim %>% ggplot2::ggplot(aes(x = HTS_TST_POS, y = TX_NEW, color = keypop)) + geom_point(size = 4) + si_style()
+linkage_zim %>% ggplot2::ggplot(aes(x = keypop, y = linkage)) + geom_point(size = 4) + si_style()
 ```
 
 5. Comet chart of #4 (future)
@@ -307,5 +307,3 @@ measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = linkage, color = psnu)
 ```{r}
 
 ```
-
->>>>>>> 0aa05623e830c9e3f3ed324e975d311d0cc571bd
