@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 title: "Data Visualization"
 author: "Aditi Arunmozhi"
@@ -152,3 +153,159 @@ measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = linkage, color = psnu)
 
 ```
 
+=======
+---
+title: "Data Visualization"
+author: "Aditi Arunmozhi"
+date: "7/21/2022"
+output: html_document
+---
+
+```{r setup}
+library(tidyverse)
+library(glamr)
+library(gophr)
+library(scales)
+library(gridExtra)
+library(grid)
+library(glitr)
+library(ggplot2)
+library(stats)
+library(ggrepel)
+library(scales)
+library(tidyverse)
+library(janitor)
+
+msd <- read_delim("MER_Structured_Datasets_PSNU_IM_FY20-23_20220617_v2_1.zip", delim = "\t", escape_double = FALSE, trim_ws = TRUE, 
+              col_types = cols(.default = "c",
+                          targets	= "d",
+                          qtr1	= "d",
+                          qtr2	= "d",
+                          qtr3	= "d",
+                          qtr4	= "d",
+                          cumulative = "d"))
+```
+
+
+Transform
+
+```{r}
+indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
+                    "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
+
+ df <- msd %>% filter(fiscal_year >= 2021, #cumulative and targets
+                    fiscal_year < 2023,
+                    str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
+                    indicator %in% indicator_list)
+ MER <- df %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
+df
+
+check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
+  mutate(cumulative = coalesce(cumulative, 0),
+         targets = coalesce(targets, 0),
+         fy = fiscal_year,
+         partner = prime_partner_name,
+         disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
+         disagg = recode(disagg, "KeyPop" = "KP"),
+         tx_ml_reason = case_when(indicator=="TX_ML" ~ str_extract(otherdisaggregate, "(?<=Outcome\\s-\\s).+")),
+         keypop = str_extract(otherdisaggregate, "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
+         keypop = recode(keypop, "People in prisons" = "Prisoners"),
+         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_", numeratordenom))) %>%
+  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, tx_ml_reason, keypop, fy, targets, cumulative) %>%
+  mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>%
+  glimpse()
+
+
+qcheck <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
+                       str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
+                       disaggregate != "KeyPop/Status") %>%
+  mutate(cumulative = coalesce(cumulative, 0),
+         targets = coalesce(targets, 0),
+         fy = fiscal_year,
+         partner = prime_partner_name,
+         disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
+         disagg = recode(disagg, "KeyPop" = "KP"),
+         keypop = str_extract(otherdisaggregate, "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
+         keypop = recode(keypop, "People in prisons" = "Prisoners"),
+         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_", numeratordenom))) %>%
+  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, keypop, fy, qtr1, qtr2, qtr3, qtr4) %>%
+  pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
+  mutate(qtr = str_replace(qtr, "qtr","Q"),
+         fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr)) %>%
+  mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>%
+  glimpse()
+
+```
+
+1. Positive or Prevention Cascade - 1 country - choose other filters, FY or quarter view
+
+```{r}
+pos <-  c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
+neg <-  c("KP_PREV", "HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT", "PrEP_CURR")
+
+#negative cascade
+cascade <- check %>% filter(fy == "2021", disagg == "KP", country == "Botswana",
+                            indicator %in% neg, str_detect(mech_name, "EpiC")) %>%
+  group_by(fy, indicator) %>%
+  summarise(sum.cum=sum(cumulative), sum.targets=sum(targets)) %>%  
+  mutate(ach = sum.cum/sum.targets) %>%
+  ggplot2::ggplot(aes(x = indicator, y = sum.cum, fill = factor(fy)))
+
+cascade + geom_col(aes(y = sum.targets, fill= "Target")) + geom_col(aes(y=sum.cum, fill= "Cumulative"), width = 0.75) + si_style()
+```
+2. TX_PVLS (D) an (N) bar chart by quarter - 1 country - choose other filters, labels 
+
+```{r}
+tx_pvls_indicators <- c("TX_PVLS_N", "TX_PVLS_D")
+
+measure_trends_tx_pvls_bots <- qcheck %>% filter(country == "Botswana", disagg == "KP", results!=0, indicator %in% tx_pvls_indicators) %>%
+  group_by(fyq, country, indicator) %>%
+  summarise(sum.results=sum(results))
+
+ggplot(measure_trends_tx_pvls_bots, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style()
+
+```
+
+3. Scatter plot of VLC and VLS, each shape is a PSNU - 1 country, FY22 cumulative - choose other filters, labels (New)
+
+```{r}
+measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
+fy22 <- c("FY22 Q1","FY22 Q2")
+
+measure_trends_bots <- check %>% filter(country == "Botswana", disagg == "KP", cumulative!=0, indicator %in% measure_indicators, fy == 2022) %>%
+  group_by(fy, country, indicator, psnu) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(values_from = sum.cumulative, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% na.omit()
+
+#note: no dedup data here, but some dedup data in dashboard
+
+#include psnu, geom_scatter
+#filter by each fy, use the last quarter in each
+#use check instead of qcheck
+#fy22 q2
+
+measure_trends_bots %>% ggplot2::ggplot(aes(x = TX_PVLS_D, y = TX_PVLS_N, color = psnu)) + geom_point(size = 4) + si_style()
+measure_trends_bots %>% ggplot2::ggplot(aes(x = TX_CURR_Lag2, y = TX_PVLS_D, color = psnu)) + geom_point(size = 4) + si_style()
+
+measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vlc, color = psnu)) + geom_point(size = 4) + si_style()
+measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vls, color = psnu)) + geom_point(size = 4) + si_style()
+
+```
+
+4. Scatter plot of HTS_TST_POS and TX_NEW  label marks with Key Population and "Proxy Linkage" calculation (TX_NEW/HTS_TST_POS) - 1 country, FY22 cumulative - choose other filters, labels (New)
+
+```{r}
+measure_trends_bots %>% ggplot2::ggplot(aes(x = HTS_TST_POS, y = TX_NEW, color = psnu)) + geom_point(size = 4) + si_style()
+measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = linkage, color = psnu)) + geom_point(size = 4) + si_style()
+```
+
+5. Comet chart of #4 (future)
+
+```{r}
+
+```
+
+>>>>>>> 0aa05623e830c9e3f3ed324e975d311d0cc571bd
