@@ -4,10 +4,17 @@ library(janitor)
 indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
                     "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
-df <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
+df <- MER_Structured_Datasets_PSNU_IM_FY20_23_20220617_v2_1 %>% filter(fiscal_year >= 2021, #cumulative and targets
                     fiscal_year < 2023,
                     str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
                     indicator %in% indicator_list)
+
+glimpse(df)
+bots <- df %>% filter(country == "Botswana")
+
+#save and write out data in openable files
+getwd()
+write.csv(bots, "botswana.csv", na = "")
 
 glimpse(df)
 table(df$indicator)
@@ -15,7 +22,7 @@ table(df$indicator)
 indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
                 "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
-# MER <- df %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
+MER <- df %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
 df
 
 check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
@@ -75,4 +82,4 @@ mmd <- df %>% filter(str_detect(indicator,"TX_CURR(?!_Lag)"),
   glimpse()
 table(mmd$indicator, mmd$disaggregate)
 
-# help("coalesce")
+#help("coalesce")

@@ -179,7 +179,7 @@ prep <- qcheck %>% filter(funding_agency == "USAID", country == "Malawi", disagg
 
 
 prep %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line() +
-  geom_label(aes(label = sum.results))
+  geom_label(aes(label = sum.results)) + si_style()
 #this one does not have anything on the plot
 
 # 3 achievement ----------------------------------------------------------------------
@@ -192,6 +192,7 @@ ach_country <- check %>% filter(fy == 2022, funding_agency %in% usaid_cdc, count
 ach_country$indicator <- factor(ach_country$indicator,
                                       levels = c("KP_PREV", "HTS_SELF", "HTS_TST", "HTS_TST_POS", "TX_NEW",
                                                  "TX_CURR", "TX_PVLS_D", "TX_PVLS_N", "PrEP_NEW", "PrEP_CURR", "PrEP_CT"))
+#error here, no USAID_CDC
 
 library(gt)
 
@@ -214,7 +215,6 @@ ach_country %>%
     columns = indicator
   ) %>%
   print()
-
 
 # 4 Positivity ----------------------------------------------------------------------
 tst <- c("HTS_TST", "HTS_TST_POS")
@@ -257,7 +257,7 @@ pos_by_im <- modality %>% filter(fy == "2022", funding_agency == "USAID", operat
 
   pos_by_im %>% ggplot(aes(x=HTS_TST, y = pos, group = country)) + geom_point() + geom_label(aes(label = percent(pos, accuracy = 1))) +  geom_label(aes(label = country), position = position_nudge(y=.05, x = 1000))
 
-
+#error with modality dataframe in transform.R
 
 # 5 pvls ----------------------------------------------------------------------
 #VL by KP scatter plot
