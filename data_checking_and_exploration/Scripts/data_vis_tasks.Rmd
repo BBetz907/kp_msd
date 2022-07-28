@@ -327,5 +327,5 @@ linkage_comet %>% ggplot() + geom_link(aes(x = HTS_TST_POS, y = keypop, xend = T
     shape = 21,
     fill = "white",
     size = 3.5
-  )
+  ) + si_style()
 ```
