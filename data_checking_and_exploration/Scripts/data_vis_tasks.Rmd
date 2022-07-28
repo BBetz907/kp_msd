@@ -305,5 +305,27 @@ linkage_zim %>% ggplot2::ggplot(aes(x = keypop, y = linkage)) + geom_point(size 
 5. Comet chart of #4 (future)
 
 ```{r}
+library(ggforce)
+linkage_comet <- check %>% filter(country == "India", disagg == "KP", cumulative!=0, indicator %in% measure_indicators, fy == 2022) %>%
+  group_by(fy, country, indicator, keypop) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(values_from = sum.cumulative, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% na.omit()
 
+linkage_comet %>% ggplot() + geom_link(aes(x = HTS_TST_POS, y = keypop, xend = TX_NEW, yend = keypop, size = stat(index))) +
+  scale_color_manual(values = c("#00A087FF", "#E64B35FF")) +
+  geom_point(
+    aes(x = TX_NEW, y = keypop),
+    shape = 21,
+    fill = "white",
+    size = 3.5
+  )  +
+  geom_point(
+    aes(x = TX_NEW, y = keypop),
+    shape = 21,
+    fill = "white",
+    size = 3.5
+  )
 ```
