@@ -20,14 +20,14 @@ library(scales)
 library(tidyverse)
 library(janitor)
 
-msd <- read_delim("MER_Structured_Datasets_PSNU_IM_FY20-23_20220617_v2_1.zip", delim = "\t", escape_double = FALSE, trim_ws = TRUE, 
-              col_types = cols(.default = "c",
-                          targets	= "d",
-                          qtr1	= "d",
-                          qtr2	= "d",
-                          qtr3	= "d",
-                          qtr4	= "d",
-                          cumulative = "d"))
+# #msd <- read_delim("MER_Structured_Datasets_PSNU_IM_FY20-23_20220617_v2_1.zip", delim = "\t", escape_double = FALSE, trim_ws = TRUE, 
+#               col_types = cols(.default = "c",
+#                           targets	= "d",
+#                           qtr1	= "d",
+#                           qtr2	= "d",
+#                           qtr3	= "d",
+#                           qtr4	= "d",
+#                           cumulative = "d"))
 ```
 
 
@@ -37,7 +37,7 @@ Transform
 indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
                     "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
- df <- msd %>% filter(fiscal_year >= 2021, #cumulative and targets
+ df <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
                     fiscal_year < 2023,
                     str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
                     indicator %in% indicator_list)
@@ -106,13 +106,15 @@ measure_trends_tx_pvls_bots <- qcheck %>% filter(country == "Botswana", disagg =
   group_by(fyq, country, indicator) %>%
   summarise(sum.results=sum(results))
 
-ggplot(measure_trends_tx_pvls_bots, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style
+ggplot(measure_trends_tx_pvls_bots, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style()
 
 #vlc with tx_pvls_d
 #vls with tx_pvls_n
 ```
 
 3. Scatter plot of VLC and VLS, each shape is a PSNU - 1 country, FY22 cumulative - choose other filters, labels (New)
+group by statement to feature snu, psnu, Scatter plot 5b
+
 
 ```{r}
 measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
@@ -126,12 +128,7 @@ measure_trends_bots <- check %>% filter(country == "Botswana", disagg == "KP", c
          vlc = TX_PVLS_D/TX_CURR_Lag2,
          linkage = TX_NEW/HTS_TST_POS) %>% na.omit()
 
-measure_trends_bots %>% ggplot2::ggplot(aes(x = TX_PVLS_D, y = TX_PVLS_N, color = psnu)) + geom_point(size = 4) +  si_style()
-measure_trends_bots %>% ggplot2::ggplot(aes(x = TX_CURR_Lag2, y = TX_PVLS_D, color = psnu)) + geom_point(size = 4) + si_style()
-
-measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vlc)) + geom_point(size = 4) + si_style()
-measure_trends_bots %>% ggplot2::ggplot(aes(x = psnu, y = vls)) + geom_point(size = 4) + si_style() # expanding axis, 
-measure_trends_bots %>% ggplot2::ggplot(aes(x = vlc, y = vls, shape = psnu)) + geom_point(size = 4) + si_style() #label for each psnu instead, highlight outlying district
+measure_trends_bots %>% ggplot2::ggplot(aes(x = vlc, y = vls, label = psnu)) + geom_text(size = 2.5, vjust = 0, nudge_y = 0.025) + xlim(.4,1.1) + ylim(.4, 1.1) + geom_point(size = 4) + si_style()
 ```
 
 4. Scatter plot of HTS_TST_POS and TX_NEW  label marks with Key Population and "Proxy Linkage" calculation (TX_NEW/HTS_TST_POS) - 1 country, FY22 cumulative - choose other filters, labels (New)
@@ -145,7 +142,6 @@ linkage_zim <- check %>% filter(country == "Zimbabwe", disagg == "KP", cumulativ
          vlc = TX_PVLS_D/TX_CURR_Lag2,
          linkage = TX_NEW/HTS_TST_POS) %>% na.omit()
 
-linkage_zim %>% ggplot2::ggplot(aes(x = HTS_TST_POS, y = TX_NEW, color = keypop)) + geom_point(size = 4) + si_style() #each keypop has a specific color, turn the higher ones to be a different color
 linkage_zim %>% ggplot2::ggplot(aes(x = keypop, y = linkage)) + geom_point(size = 4) + si_style()
 ```
 
