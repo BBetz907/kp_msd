@@ -1,0 +1,29 @@
+---
+title: "read_msd"
+author: "Bourke Betz"
+format: html
+editor: visual
+---
+
+read_msd() should read and unzip your data source, allowing you to save it as a dataframe. It's [source](https://github.com/USAID-OHA-SI/gophr) is public, and so is the [documentation](https://usaid-oha-si.github.io/gophr/reference/index.html).
+
+First load the package and a couple other packages
+
+```{r chunk-label, message=FALSE, warning=FALSE, echo = TRUE}
+library(gophr)
+library(dplyr)
+library(glamr)
+library(glitr)
+```
+
+Identify the name of the latest PSNU x IM MER Structured Data Set
+
+```{r}
+file <- glamr::return_latest("../Data", "PSNU_IM_FY2")
+```
+
+Read MSD
+
+```{r}
+df <- read_msd(file, save_rds = FALSE, remove_txt = FALSE)
+```
