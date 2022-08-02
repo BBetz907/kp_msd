@@ -105,7 +105,7 @@ measure_trends_tx_pvls_bots <- qcheck %>% filter(country == "Botswana", disagg =
   group_by(fyq, country, indicator) %>%
   summarise(sum.results=sum(results), .groups = 'drop')
 
-ggplot(measure_trends_tx_pvls_bots, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style()
+ggplot(measure_trends_tx_pvls_bots, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style() + scale_fill_manual(values=c("#64b4a6", "#004e43"))
 
 #vlc with tx_pvls_d
 #vls with tx_pvls_n
