@@ -14,6 +14,7 @@
 *.twbx
 *.pptx
 *.Rproj
+*.html
 
 #nothing from these folders
 AI/*
