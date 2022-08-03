@@ -27,7 +27,7 @@ measure_trends_2b <- qcheck %>% filter(disagg == "KP", results!=0, indicator == 
 
 measure_trends_2b %>% ggplot2::ggplot(aes(x = fyq, y = TX_CURR)) + geom_line() + geom_point() + si_style()
 ```
-2c
+2c: need to add vlc and vls percentages
 ```{r}
 indicators_2c <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2")
 
@@ -44,7 +44,12 @@ ggplot(measure_trends_2c, aes(x = fyq, y = value, group = vl)) + geom_col(aes(fi
 ```
 2d
 ```{r}
+measure_trends_2d <- qcheck %>% filter(disagg == "KP", results!=0, indicator == "HTS_TST_POS") %>%
+  group_by(fyq, indicator, keypop) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>% na.omit()
 
+measure_trends_2d %>% ggplot2::ggplot(aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom_line(aes(color = keypop)) + si_style()
 ```
 2e
 ```{r}
