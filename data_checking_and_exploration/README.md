@@ -1,0 +1,1 @@
+This project is aimed to create a library of visuals describing PEPFAR/USAID Key Populations programming. The source code can be used to create exploratory and explanatory visuals, as well as produce output for quarterly QA/QC of other analytic products
