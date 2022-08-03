@@ -2,17 +2,56 @@
 title: "R Notebook"
 output: html_notebook
 ---
+Line graphs that match section 2: TX_NEW and HTS_TST_POST, testing all the way through PreP, include value labels, quarter on the y axis, jsut the indicator values, a line chart with all the vlaues labeled for the last year
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
+2a
 ```{r}
-plot(cars)
+indicators_2a <- c("HTS_TST_POS", "TX_NEW")
+
+measure_trends_2a <- qcheck %>% filter(disagg == "KP", results!=0, indicator %in% indicators_2a) %>%
+  group_by(fyq, indicator) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>% pivot_longer(cols = HTS_TST_POS:TX_NEW, names_to = "indicator", values_to = "results") %>% na.omit()
+
+measure_trends_2a %>% ggplot2::ggplot(aes(x = fyq, y = results, group = indicator)) + geom_line(aes(color = indicator)) + si_style()
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+2b
+```{r}
+indicators_2b <- c("TX_CURR","TX_NEW", "TX_NET_NEW")
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+measure_trends_2b <- qcheck %>% filter(disagg == "KP", results!=0, indicator == "TX_CURR") %>%
+  group_by(fyq, indicator) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>% na.omit()
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+measure_trends_2b %>% ggplot2::ggplot(aes(x = fyq, y = TX_CURR)) + geom_line() + geom_point() + si_style()
+```
+2c
+```{r}
+indicators_2c <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2")
+
+measure_trends_2c<- qcheck %>% filter(disagg == "KP", results!=0, indicator %in% indicators_2c) %>%
+  group_by(fyq, country, indicator) %>%
+  summarise(sum.results=sum(results))  %>% 
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2)
+
+ggplot(indicators_2c, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style()
+```
+2d
+```{r}
+
+```
+2e
+```{r}
+
+```
+2e2
+```{r}
+
+```
+2f
+```{r}
+
+```
