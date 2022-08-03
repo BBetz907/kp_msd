@@ -40,7 +40,7 @@ measure_trends_2c<- qcheck %>% filter(disagg == "KP", results!=0, indicator %in%
   select(fyq, TX_PVLS_N, TX_PVLS_D, vlc, vls) %>%
   pivot_longer(cols = TX_PVLS_N:vls, names_to = "vl", values_to = "value")
 
-ggplot(measure_trends_2c, aes(x = fyq, y = value, group = vl)) + geom_col(aes(fill = vl), position = position_dodge()) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + si_style()
+ggplot(measure_trends_2c, aes(x = fyq, y = value, group = vl)) + geom_col(aes(fill = vl), position = position_dodge()) #+ geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + si_style()
 ```
 2d
 ```{r}
