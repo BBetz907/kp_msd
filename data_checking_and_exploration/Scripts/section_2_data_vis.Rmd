@@ -32,12 +32,15 @@ measure_trends_2b %>% ggplot2::ggplot(aes(x = fyq, y = TX_CURR)) + geom_line() +
 indicators_2c <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2")
 
 measure_trends_2c<- qcheck %>% filter(disagg == "KP", results!=0, indicator %in% indicators_2c) %>%
-  group_by(fyq, country, indicator) %>%
+  group_by(fyq, indicator) %>%
   summarise(sum.results=sum(results))  %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(vls = TX_PVLS_N/TX_PVLS_D,
-         vlc = TX_PVLS_D/TX_CURR_Lag2)
+         vlc = TX_PVLS_D/TX_CURR_Lag2) %>%
+  select(fyq, TX_PVLS_N, TX_PVLS_D, vlc, vls) %>%
+  pivot_longer(cols = TX_PVLS_N:vls, names_to = "vl", values_to = "value")
 
-ggplot(indicators_2c, aes(x = fyq, y = sum.results, group=indicator)) + geom_col(aes(fill = indicator), position = position_dodge()) + si_style()
+ggplot(measure_trends_2c, aes(x = fyq, y = value, group = vl)) + geom_col(aes(fill = vl), position = position_dodge()) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + si_style()
 ```
 2d
 ```{r}
