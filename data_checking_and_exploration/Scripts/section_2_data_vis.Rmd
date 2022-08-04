@@ -4,6 +4,12 @@ output: html_notebook
 ---
 Line graphs that match section 2: TX_NEW and HTS_TST_POST, testing all the way through PreP, include value labels, quarter on the y axis, jsut the indicator values, a line chart with all the vlaues labeled for the last year
 
+```{r setup}
+library(tidyverse)
+library(patchwork)
+```
+
+
 2a
 ```{r}
 indicators_2a <- c("HTS_TST_POS", "TX_NEW")
@@ -20,13 +26,14 @@ measure_trends_2a %>% ggplot2::ggplot(aes(x = fyq, y = results, group = indicato
 ```{r}
 indicators_2b <- c("TX_CURR","TX_NEW", "TX_NET_NEW")
 
-measure_trends_2b <- qcheck %>% filter(disagg == "KP", results!=0, indicator == "TX_CURR") %>%
+measure_trends_2b <- qcheck %>% filter(disagg == "KP", results!=0, indicator %in% indicators_2b) %>%
   group_by(fyq, indicator) %>%
   summarise(sum.results=sum(results)) %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>% na.omit()
 
-measure_trends_2b %>% ggplot2::ggplot(aes(x = fyq, y = TX_CURR)) + geom_line() + geom_point() + si_style()
+measure_trends_2b %>% ggplot2::ggplot(aes(x = fyq, y = TX_CURR, group = 1)) + geom_col(aes(y = TX_NEW)) + geom_col(aes(y = TX_NET_NEW)) + geom_line(aes(y = TX_CURR, group = 1)) + geom_point() + si_style()
 ```
+
 2c: need to add vlc and vls percentages
 ```{r}
 indicators_2c <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2")
@@ -42,6 +49,7 @@ measure_trends_2c<- qcheck %>% filter(disagg == "KP", results!=0, indicator %in%
 
 ggplot(measure_trends_2c, aes(x = fyq, y = value, group = vl)) + geom_col(aes(fill = vl), position = position_dodge()) #+ geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + si_style()
 ```
+
 2d
 ```{r}
 measure_trends_2d <- qcheck %>% filter(disagg == "KP", results!=0, indicator == "HTS_TST_POS") %>%
@@ -51,15 +59,46 @@ measure_trends_2d <- qcheck %>% filter(disagg == "KP", results!=0, indicator == 
 
 measure_trends_2d %>% ggplot2::ggplot(aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom_line(aes(color = keypop)) + si_style()
 ```
+
 2e
 ```{r}
+coeff <- .00001
+indicators_2e <- c("HTS_TST","HTS_TST_POS")
 
+measure_trends_2e<- qcheck %>% filter(disagg == "KP", results!=0, indicator %in% indicators_2e) %>%
+  group_by(fyq, indicator) %>%
+  summarise(sum.results=sum(results))  %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(positivity = HTS_TST_POS/HTS_TST)
+
+e1 <- ggplot(measure_trends_2e, aes(x = fyq)) + geom_col(aes(y = HTS_TST_POS))
+e2 <- ggplot(measure_trends_2e, aes(x = fyq)) + geom_line(aes(y = positivity, group = 1))
+e1 + e2
+
+ggplot(measure_trends_2e, aes(x = fyq)) + geom_col(aes(y = HTS_TST_POS)) + geom_line(aes(x = fyq, y = positivity, group = 1), size = 2) + geom_point(aes(y = positivity)) + scale_y_continuous(name = "HTS_TST_POS", sec.axis = sec_axis(~.*coeff, name = "HTS Positivity")) + si_style() 
 ```
+
 2e2
 ```{r}
+indicators_2e2 <- c("HTS_TST","HTS_TST_POS")
 
+measure_trends_2e2 <- qcheck %>% filter(disagg == "KP", results!=0, indicator %in% indicators_2e) %>%
+  group_by(fyq, indicator, keypop) %>%
+  summarise(sum.results=sum(results))  %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(positivity = HTS_TST_POS/HTS_TST)
+
+ggplot(measure_trends_2e2, aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom_line(aes(color = keypop)) + geom_area(aes(fill = keypop))
 ```
+
 2f
 ```{r}
+indicators_2f <- c("PrEP_NEW", "PrEP_CT")
 
+measure_trends_2f <- qcheck %>% filter(disagg == "KP", results!=0, indicator %in% indicators_2f) %>%
+  group_by(fyq, indicator) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator)
+
+measure_trends_2f + geom_col(aes(y = sum.targets, fill= "Target")) + geom_col(aes(y=sum.cum, fill= "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + scale_fill_discrete(labels = c("Achievement", "Cumulative", "Target"))+ si_style()
 ```

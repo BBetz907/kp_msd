@@ -42,7 +42,7 @@ indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW"
                     fiscal_year < 2023,
                     str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
                     indicator %in% indicator_list) 
- # MER <- MSD %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
+MER <- MSD %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
 
 check <- MSD %>% filter(disaggregate != "KeyPop/Status") %>%
   mutate(cumulative = coalesce(cumulative, 0),
