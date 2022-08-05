@@ -1,1 +1,1 @@
-This branch is aimed to improve and customize the formatting of visuals created before 8/3/2022
+This project is aimed to create a library of visuals describing PEPFAR/USAID Key Populations programming. The source code can be used to create exploratory and explanatory visuals, as well as produce output for quarterly QA/QC of other analytic products.
