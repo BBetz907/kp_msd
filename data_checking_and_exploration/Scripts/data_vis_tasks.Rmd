@@ -88,12 +88,29 @@ neg <-  c("KP_PREV", "HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT"
 #negative cascade
 cascade <- check %>% filter(fy == "2021", disagg == "KP", country == "Botswana",
                             indicator %in% neg, str_detect(mech_name, "EpiC")) %>%
-  group_by(fy, indicator) %>%
-  summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%  
+group_by(fy, indicator) %>%
+summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets) %>%
   ggplot2::ggplot(aes(x = indicator, y = sum.cum, fill = factor(fy)))
 
-cascade + geom_col(aes(y = sum.targets, fill= "Target")) + geom_col(aes(y=sum.cum, fill= "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + scale_fill_discrete(labels = c("Achievement", "Cumulative", "Target"))+ si_style()
+#build plot
+cascade + 
+  
+#specify columns
+geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) +
+
+geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + 
+
+#fill needs to be specified manually for Label onlyf
+geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") +
+
+#Use SI theme to remove lines
+si_style_nolines() +   
+  
+#Assign colors to color and fill, fill needs to be specified manually for Label only
+scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + 
+  
+scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e"))
 ```
 
 2.  TX_PVLS (D) an (N) bar chart by quarter - 1 country - choose other filters, labels
