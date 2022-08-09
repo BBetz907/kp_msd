@@ -104,8 +104,8 @@ geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75
 #fill needs to be specified manually for Label onlyf
 geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") +
 
-#Use SI theme to remove lines
-si_style_nolines() +   
+#Use SI theme to remove lines but keep xy lines
+si_style_xyline() +   
   
 #Assign colors to color and fill, fill needs to be specified manually for Label only
 scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + 
