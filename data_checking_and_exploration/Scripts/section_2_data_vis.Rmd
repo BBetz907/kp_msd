@@ -2,7 +2,6 @@
 title: "R Notebook"
 output: html_notebook
 ---
-Line graphs that match section 2: TX_NEW and HTS_TST_POST, testing all the way through PreP, include value labels, quarter on the y axis, jsut the indicator values, a line chart with all the vlaues labeled for the last year
 
 ```{r setup}
 library(tidyverse)
@@ -10,7 +9,6 @@ library(patchwork)
 library(dplyr)
 pick <- function(condition){function(d) d %>% filter_(condition)}
 ```
-
 
 2a
 ```{r, warning=FALSE}
@@ -33,7 +31,7 @@ measure_trends_2b <- qcheck %>% filter(country == "Botswana", disagg == "KP", re
   summarise(sum.results=sum(results), .groups = "drop") %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>% pivot_longer(TX_NEW:TX_NET_NEW, names_to = "indicator", values_to = "results") %>% na.omit()
 
-ggplot(measure_trends_2b, aes(x = fyq, y = results)) + geom_col(data = pick(~indicator == "TX_NEW"), aes(fill = indicator), width = 0.45, position = position_nudge(x = -0.225)) + geom_col(data = pick(~indicator == "TX_NET_NEW"), aes(fill = indicator), width = 0.45, position = position_nudge(x = 0.225)) + geom_line(data = pick(~indicator == "TX_CURR"), (aes(group = 1))) + si_style() + si_style_xyline()
+ggplot(measure_trends_2b, aes(x = fyq, y = results)) + geom_col(data = pick(~indicator == "TX_NEW"), aes(fill = indicator), width = 0.45, position = position_nudge(x = -0.225)) + geom_col(data = pick(~indicator == "TX_NET_NEW"), aes(fill = indicator), width = 0.45, position = position_nudge(x = 0.225)) + geom_line(data = pick(~indicator == "TX_CURR"), (aes(group = 1))) + si_style_xyline()+ scale_color_manual(name = "", values = c("TX_NET_NEW" = grey10k, "TX_NEW" = denim)) + scale_fill_manual(name = "", values = c("TX_NET_NEW" = grey10k, "TX_NEW" = denim))
 ```
 
 2c: need to add vlc and vls percentages d = vlc n = vls
@@ -50,7 +48,10 @@ measure_trends_2c<- qcheck %>% filter(country == "Botswana", disagg == "KP", res
   select(fyq, TX_PVLS_N, TX_PVLS_D, vlc, vls) %>%
   pivot_longer(cols = c("TX_PVLS_D","vlc","TX_PVLS_N","vls"), names_to = "indicator", values_to = "results")
 
-ggplot(measure_trends_2c, aes(x = fyq, y = results)) + geom_col(data = pick(~indicator == "TX_PVLS_D"), aes(fill = indicator), width = 0.45, position = position_nudge(x = -0.225)) + geom_col(data = pick(~indicator == "TX_PVLS_N"), aes(fill = indicator), width = 0.45, position = position_nudge(x = 0.225)) + si_style_xyline()#aes(y = results, fill = indicator))#+ geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 0.1))) + si_style()
+c1 <- ggplot(measure_trends_2c, aes(x = fyq, y = results)) + geom_col(data = pick(~indicator == "TX_PVLS_D"), aes(fill = indicator), width = 0.45, position = position_nudge(x = -0.225)) + geom_col(data = pick(~indicator == "TX_PVLS_N"), aes(fill = indicator), width = 0.45, position = position_nudge(x = 0.225)) + si_style_xyline() + scale_color_manual(name = "", values = c("TX_PVLS_N" = grey10k, "TX_PVLS_D" = denim)) + scale_fill_manual(name = "", values = c("TX_PVLS_N" = grey10k, "TX_PVLS_D" = denim))
+c2 <- ggplot(measure_trends_2c, aes(x = fyq, y = results)) + geom_line(data = pick(~indicator == "vlc"), aes(fill = indicator)) + geom_line(data = pick(~indicator == "vls"), aes(fill = indicator)) + si_style_xyline()
+
+c1 + c2
 ```
 
 2d
@@ -106,5 +107,5 @@ measure_trends_2f <- qcheck %>% filter(country == "Malawi", disagg == "KP", resu
   group_by(fy) %>%
   mutate(fytd = cumsum(PrEP_NEW))
 
-ggplot(measure_trends_2f, aes(x = fyq)) + geom_col(aes(x = fyq, y = fytd, fill = "FY to date")) + geom_col(aes(x = fyq, y = PrEP_NEW, fill = "PrEP_NEW"), width = 0.75) + si_style_xyline()
+ggplot(measure_trends_2f, aes(x = fyq)) + geom_col(aes(x = fyq, y = fytd, fill = "FY to date")) + geom_col(aes(x = fyq, y = PrEP_NEW, fill = "PrEP_NEW"), width = 0.75) + si_style_xyline() + scale_color_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim)) + scale_fill_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim))
 ```
