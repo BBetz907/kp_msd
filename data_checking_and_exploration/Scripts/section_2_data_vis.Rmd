@@ -64,7 +64,7 @@ measure_trends_2d <- qcheck %>% filter(country == "India", disagg == "KP", resul
   pivot_wider(values_from = sum.results, names_from = indicator) %>% 
   mutate(positivity = HTS_TST_POS/HTS_TST) %>% na.omit()
 
-measure_trends_2d %>% ggplot2::ggplot(aes(x = fyq, y = positivity, group = keypop)) + geom_line(aes(color = keypop)) +  scale_y_continuous(labels = scales::percent) + si_style_xyline()
+measure_trends_2d %>% ggplot2::ggplot(aes(x = fyq, y = positivity, group = keypop)) + geom_line(aes(color = keypop)) +  scale_y_continuous(labels = scales::percent) + si_style_xyline() + scale_color_manual(name = "", values = c("FSW" = "#005e7a", "MSM" = "#f28965", "Prisoners" = "#990d2e", "PWID" = "#fbcc50", "TG" = "#7ecfc0", "All People" = "#a7a9ac")) + scale_fill_manual(name = "", values = c("FSW" = "#005e7a", "MSM" = "#f28965", "Prisoners" = "#990d2e", "PWID" = "#fbcc50", "TG" = "#7ecfc0", "All People" = "#a7a9ac"))
 ```
 
 2e
@@ -87,13 +87,13 @@ e1 + e2
 ```{r, warning=FALSE}
 indicators_2e2 <- c("HTS_TST","HTS_TST_POS")
 
-measure_trends_2e2 <- qcheck %>% filter(country == "Botswana", disagg == "KP", results!=0, indicator %in% indicators_2e) %>%
+measure_trends_2e2 <- qcheck %>% filter(country == "India", disagg == "KP", results!=0, indicator %in% indicators_2e) %>%
   group_by(fyq, indicator, keypop) %>%
   summarise(sum.results=sum(results), .groups = "drop")  %>% 
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(positivity = HTS_TST_POS/HTS_TST)
 
-ggplot(measure_trends_2e2, aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom_line(aes(color = keypop)) + geom_area(aes(fill = keypop))# + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(positivity, accuracy = 0.1)))
+ggplot(measure_trends_2e2, aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom_line(aes(color = keypop)) + geom_area(aes(fill = keypop)) + scale_color_manual(name = "", values = c("FSW" = "#005e7a", "MSM" = "#f28965", "Prisoners" = "#990d2e", "PWID" = "#fbcc50", "TG" = "#7ecfc0", "All People" = "#a7a9ac")) + scale_fill_manual(name = "", values = c("FSW" = "#005e7a", "MSM" = "#f28965", "Prisoners" = "#990d2e", "PWID" = "#fbcc50", "TG" = "#7ecfc0", "All People" = "#a7a9ac"))
 ```
 
 2f
