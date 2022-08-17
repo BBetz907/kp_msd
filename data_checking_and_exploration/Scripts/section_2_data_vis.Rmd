@@ -49,7 +49,9 @@ measure_trends_2c<- qcheck %>% filter(country == "Botswana", disagg == "KP", res
   pivot_longer(cols = c("TX_PVLS_D","vlc","TX_PVLS_N","vls"), names_to = "indicator", values_to = "results")
 
 c1 <- ggplot(measure_trends_2c, aes(x = fyq, y = results)) + geom_col(data = pick(~indicator == "TX_PVLS_D"), aes(fill = indicator), width = 0.45, position = position_nudge(x = -0.225)) + geom_col(data = pick(~indicator == "TX_PVLS_N"), aes(fill = indicator), width = 0.45, position = position_nudge(x = 0.225)) + si_style_xyline() + scale_color_manual(name = "", values = c("TX_PVLS_N" = grey10k, "TX_PVLS_D" = denim)) + scale_fill_manual(name = "", values = c("TX_PVLS_N" = grey10k, "TX_PVLS_D" = denim))
-c2 <- ggplot(measure_trends_2c, aes(x = fyq, y = results)) + geom_line(data = pick(~indicator == "vlc"), aes(fill = indicator)) + geom_line(data = pick(~indicator == "vls"), aes(fill = indicator)) + si_style_xyline()
+c2 <- ggplot(measure_trends_2c, aes(x = fyq, y = results)) + geom_line(data = pick(~indicator == "vlc"), aes(fill = indicator, color = indicator), group = 1) + geom_line(data = pick(~indicator == "vls"), aes(fill = indicator, color = indicator), group = 1) + si_style_xyline()
+
+#ggplot(aes(x = vlc, y = vls, label = psnu)) + geom_text(size = 2.5, vjust = 0, nudge_y = 0.025) + geom_point(size = 4) + si_style() + scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(.4,1.1)) + scale_x_continuous(labels = scales::percent_format(accuracy = 1), limits = c(.4,1.1)) 
 
 c1 + c2
 ```
