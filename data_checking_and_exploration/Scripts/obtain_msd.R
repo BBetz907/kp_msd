@@ -1,18 +1,14 @@
 library(glamr)
 library(keyring)
+library(tidyverse)
 
-email <- "XXX@usaid.gov"
+load_secrets()
 
-set_pano(email)
-
-# keyring::key_list()
-# 
-# load_secrets()
 
 # glamr::set_paths(folderpath_msd = "Data",
-#                  folderpath_datim =  "Data",
-#                  folderpath_downloads =  "Data")
-#comment in/out the above after setting initially
+#                   folderpath_datim =  "Data",
+#                   folderpath_downloads =  "Data")
+## comment in/out the above after setting initially
 
 
 #create active session
@@ -36,8 +32,7 @@ dir_mer_path <- dirs %>%
 mer_items <- pano_content(page_url = dir_mer_path, session = sess) %>%
   pano_elements(page_url = dir_mer_path)
 # Extract MER data items details from HTML CODE
-dest_path <- paste0(si_path(),"/Temp/")
-
+# dest_path <- paste0(si_path(),"/Temp/")
 
 # pull latest psnuXim MSD ---------------------------------------------------------
 url_psnu_im <- mer_items %>%
@@ -57,10 +52,9 @@ pano_download(item_url = url_psnu_im, session = sess)
 # optional additional data
 ################################################################################
 # Load packages
-library(tidyverse)
-library(rvest)
-library(httr)
-library(zip)
+# library(rvest)
+# library(httr)
+# library(zip)
 
 # pull latest NAT_subnat MSD ---------------------------------------------------------
 url_nat_subnat <- mer_items %>%
