@@ -4,26 +4,12 @@ library(janitor)
 indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
                     "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
-df <- MER_Structured_Datasets_PSNU_IM_FY20_23_20220617_v2_1 %>% filter(fiscal_year >= 2021, #cumulative and targets
+df <- mer_df %>% filter(fiscal_year >= 2021, #cumulative and targets
                     fiscal_year < 2023,
                     str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
-                    indicator %in% indicator_list)
+                    indicator %in% indicator_list) %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
 
-glimpse(df)
-bots <- df %>% filter(country == "Botswana")
-
-#save and write out data in openable files
-getwd()
-write.csv(bots, "botswana.csv", na = "")
-
-glimpse(df)
 table(df$indicator)
-
-indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
-                "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
-
-MER <- df %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
-df
 
 check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
   mutate(cumulative = coalesce(cumulative, 0),
@@ -34,8 +20,7 @@ check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
          disagg = recode(disagg, "KeyPop" = "KP"),
          tx_ml_reason = case_when(indicator=="TX_ML" ~ str_extract(otherdisaggregate, "(?<=Outcome\\s-\\s).+")),
          keypop = str_extract(otherdisaggregate, "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
-         keypop = recode(keypop, "People in prisons" = "Prisoners"),
-         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_", numeratordenom))) %>%
+         keypop = recode(keypop, "People in prisons" = "Prisoners")) %>%
   select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, tx_ml_reason, keypop, fy, targets, cumulative) %>%
   mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>%
   glimpse()
@@ -51,8 +36,7 @@ qcheck <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
          disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
          disagg = recode(disagg, "KeyPop" = "KP"),
          keypop = str_extract(otherdisaggregate, "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
-         keypop = recode(keypop, "People in prisons" = "Prisoners"),
-         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_", numeratordenom))) %>%
+         keypop = recode(keypop, "People in prisons" = "Prisoners")) %>%
   select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, keypop, fy, qtr1, qtr2, qtr3, qtr4) %>%
   pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
   mutate(qtr = str_replace(qtr, "qtr","Q"),
@@ -60,9 +44,9 @@ qcheck <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
   mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>%
   glimpse()
 
-qcheck
+rm(df)
 
-modality <- df %>% filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
+modality <- mer_df %>% filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
                           str_detect(indicator, "HTS_TST") == TRUE) %>%
   mutate(cumulative = coalesce(cumulative, 0),
          targets = coalesce(targets, 0),
@@ -71,7 +55,7 @@ modality <- df %>% filter(str_detect(standardizeddisaggregate, "KeyPop|Total") =
   select(operatingunit, country, snu1, psnu, prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom, disaggregate, modality, fy, targets, cumulative, age, ageasentered, sex) %>%
   glimpse()
 
-mmd <- df %>% filter(str_detect(indicator,"TX_CURR(?!_Lag)"),
+mmd <- mer_df %>% filter(str_detect(indicator,"TX_CURR(?!_Lag)"),
                      str_detect(disaggregate, "ARVDispense|Total")) %>%
   mutate(cumulative = coalesce(cumulative, 0),
          targets = coalesce(targets, 0),
@@ -81,5 +65,8 @@ mmd <- df %>% filter(str_detect(indicator,"TX_CURR(?!_Lag)"),
   select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disaggregate, arv, otherdisaggregate, fy, targets, cumulative) %>%
   glimpse()
 table(mmd$indicator, mmd$disaggregate)
+
+rm(mer_df)
+
 
 #help("coalesce")

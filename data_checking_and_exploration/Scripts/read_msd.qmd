@@ -19,11 +19,11 @@ library(glitr)
 Identify the name of the latest PSNU x IM MER Structured Data Set
 
 ```{r}
-file <- glamr::return_latest("../Data", "PSNU_IM_FY2")
+file <- glamr::return_latest("../Data/", "PSNU_IM_FY2")
 ```
 
 Read MSD
 
 ```{r}
-df <- read_msd(file, save_rds = FALSE, remove_txt = FALSE)
+mer_df <- read_msd(file, save_rds = FALSE, remove_txt = FALSE)
 ```
