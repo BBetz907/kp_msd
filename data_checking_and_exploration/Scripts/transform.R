@@ -4,18 +4,17 @@ library(janitor)
 indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
                     "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
-df <- mer_df %>% filter(fiscal_year >= 2021, #cumulative and targets
+df <- mer_df %>%  filter(fiscal_year >= 2021, #cumulative and targets
                     fiscal_year < 2023,
-                    str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
-                    indicator %in% indicator_list) %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
+                    str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE) %>%
+                  mutate(indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom))) %>%
+                  filter(indicator %in% indicator_list) %>% mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% glimpse()
 
-table(df$indicator)
 
 check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
   mutate(cumulative = coalesce(cumulative, 0),
          targets = coalesce(targets, 0),
          fy = fiscal_year,
-         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
          partner = prime_partner_name,
          disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
          disagg = recode(disagg, "KeyPop" = "KP"),
@@ -33,7 +32,6 @@ qcheck <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
   mutate(cumulative = coalesce(cumulative, 0),
          targets = coalesce(targets, 0),
          fy = fiscal_year,
-         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
          partner = prime_partner_name,
          disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
          disagg = recode(disagg, "KeyPop" = "KP"),
