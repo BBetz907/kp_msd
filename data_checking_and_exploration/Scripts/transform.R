@@ -15,6 +15,7 @@ check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
   mutate(cumulative = coalesce(cumulative, 0),
          targets = coalesce(targets, 0),
          fy = fiscal_year,
+         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
          partner = prime_partner_name,
          disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
          disagg = recode(disagg, "KeyPop" = "KP"),
@@ -32,17 +33,21 @@ qcheck <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
   mutate(cumulative = coalesce(cumulative, 0),
          targets = coalesce(targets, 0),
          fy = fiscal_year,
+         indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
          partner = prime_partner_name,
          disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
          disagg = recode(disagg, "KeyPop" = "KP"),
          keypop = str_extract(otherdisaggregate, "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
          keypop = recode(keypop, "People in prisons" = "Prisoners")) %>%
   select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, keypop, fy, qtr1, qtr2, qtr3, qtr4) %>%
+  mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>%
   pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
   mutate(qtr = str_replace(qtr, "qtr","Q"),
          fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr)) %>%
-  mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>%
   glimpse()
+
+table(qcheck$indicator)
+table(qcheck$numeratordenom)
 
 rm(df)
 
