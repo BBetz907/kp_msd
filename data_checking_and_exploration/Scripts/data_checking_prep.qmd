@@ -262,7 +262,7 @@ measure_trends_ug_kp_b %>% ggplot2::ggplot(aes(x = fyq, y = results, group = ind
 
 1c. Indicator Trend Comparison: By KP, By agency
 
-##########################################as with many of these, you tend to add more indicators to the view. it appears you used the QA/QC outline as your guide but didn't consult the dashboard. Also, since we're checking the data, we really need to see values, even if they aren't aesthetically pleasing. It's confusing because you say "by KP" but then emphasize everything by indicator
+##########################################as with many of these, more indicators than necessary are in the view. With a few exceptions it's one at a time. Since we're checking the data, we really need to see values, even if they aren't aesthetically pleasing.
 
 ```{r warning=FALSE}
 #Uganda
