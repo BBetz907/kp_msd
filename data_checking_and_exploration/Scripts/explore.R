@@ -10,11 +10,13 @@ library(scales)
 
 
 pos <-  c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
-neg <-  c("KP_PREV", "HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT", "PrEP_CURR")
+neg <-  c("HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT", "PrEP_CURR")
+mal_im <- c("81764","81759")
 
-cascade <- check %>% filter(country == "Botswana", disagg == "KP", indicator %in% neg) %>%
+
+cascade <- check %>% filter(country == "Malawi", mech_code %in% mal_im, disagg == "KP", indicator %in% neg) %>%
   group_by(fy, indicator) %>%
-  summarise(sum.cum=sum(cumulative)) %>%
+  summarise(sum.cum=sum(cumulative)) %>% 
   ggplot2::ggplot(aes(x = indicator, y = sum.cum, fill = factor(fy)))
 
 cascade + geom_col() + geom_label(color = "white", position = position_stack(vjust = 0.9), aes(label = sum.cum)) + facet_wrap(~ fy) + theme(legend.position = "none")
@@ -83,14 +85,14 @@ pvls_trends_country +
 
 #fixed
 table(qcheck$indicator)
-sa <- c("Zambia", "Malawi", "Botswana")
+sa <- c("Uganda")
 pvls_trends_country <- qcheck %>% filter(country %in% sa, disagg == "KP",
-                                         results!=0, indicator == "TX_PVLS_D") %>%
-  group_by(fyq, country, indicator) %>%
+                                         results!=0, indicator == "HTS_TST") %>%
+  group_by(fyq, funding_agency, indicator) %>%
   summarise(sum.results=sum(results))
 
-ggplot(pvls_trends_country, aes(x = fyq, y = sum.results, group=country)) +
-  geom_line(aes(color = country)) +
+ggplot(pvls_trends_country, aes(x = fyq, y = sum.results, group=funding_agency)) +
+  geom_line(aes(color = funding_agency)) +
   geom_label(aes(label = sum.results)) + facet_grid(~indicator)
 # 1d ----------------------------------------------------------------------
 measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
