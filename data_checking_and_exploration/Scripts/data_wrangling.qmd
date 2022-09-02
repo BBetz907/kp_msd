@@ -1,0 +1,50 @@
+---
+title: "data_wrangling"
+format: html
+editor: visual
+---
+
+### Set-Up
+
+##### Packages
+
+```{r}
+library(tidyverse)
+library(glamr)
+library(glitr)
+library(gophr)
+library(readxl)
+library(janitor)
+library(writexl)
+```
+
+##### Reading in Data
+
+```{r warning=FALSE}
+setwd("C:/Users/STAR/Documents/KP_led_orgs_project/Data")
+d <- read_excel("EpiC FY23 Subrecipient Data to USAID 22-0901.xlsx")
+```
+
+##### Cleaning up Data
+
+```{r}
+#Table 1
+table1 <- d[, 2:5]
+table1 <- remove_empty(table1, which = "rows")
+table1 <- table1[!(is.na(table1$...3)),]
+table1 <- table1 %>% row_to_names(row_number = 1)
+write_xlsx(table1, "C:\\Users\\STAR\\Documents\\KP_led_orgs_project\\Data\\Table1.xlsx")
+
+#Table 2
+table2 <- d[, 7:ncol(d)]
+table2 <- remove_empty(table2, which = "rows")
+table2 <- table2[!(is.na(table2$...9)),]
+table2 <- table2 %>% row_to_names(row_number = 1)
+write_xlsx(table2, "C:\\Users\\STAR\\Documents\\KP_led_orgs_project\\Data\\Table2.xlsx")
+```
+
+#### Visualization
+
+```{r}
+ggplot(table2, aes(x = `Country`, y = `COP Budget`)) + geom_col(aes(y = `COP Budget`)) + geom_col(aes(y = `Subrecipient $`))
+```
