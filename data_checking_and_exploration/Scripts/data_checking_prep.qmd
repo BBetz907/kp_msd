@@ -434,8 +434,6 @@ ggplot(measure_trends_laos_2b_msm, aes(x = fyq, y = results)) + geom_col(data = 
 measure_trends_laos_2b_msm
 
 #USAID All People
-### Here we actually need to filter to Totals. Otherwise KP get counted twice.
-qcheck
 measure_trends_laos_2b_all <- qcheck %>% filter(country == "Laos", results!=0, indicator %in% indicators_2b, funding_agency == "USAID", disagg == "Total") %>%
   group_by(fyq, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>%
@@ -451,7 +449,7 @@ measure_trends_laos_2b_all
 
 #### Kenya
 
-```{r}
+```{r warning=FALSE}
 indicators_2c <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2")
 
 #errors from here on out 
@@ -476,13 +474,11 @@ measure_trends_ken_2c
 
 ken_c1 + ken_c2
 
-#issues from here on out due to TX_PVLS_N & D issues
-
 ```
 
 #### Mozambique
 
-```{r}
+```{r warning=FALSE}
 
 #Mozambique
 
@@ -551,7 +547,7 @@ measure_trends_2d_all %>% ggplot2::ggplot(aes(x = fyq, y = positivity, group = 1
 
 #### Botswana
 
-```{r}
+```{r warning=FALSE}
 coeff <- .00001
 indicators_2e <- c("HTS_TST","HTS_TST_POS")
 
@@ -569,7 +565,7 @@ e1 + e2
 
 #### India
 
-```{r}
+```{r warning=FALSE}
 
 #2e2
 indicators_2e2 <- c("HTS_TST","HTS_TST_POS")
@@ -666,25 +662,25 @@ Issues with this whole section
 
 #### Zimbabwe
 
-```{r}
+```{r warning=FALSE}
 #Zimbabwe by KP
 measure_trends_zim_5a<- qcheck %>% filter(country == "Zimbabwe", disagg == "KP", results!=0, indicator %in% indicators_2c, fyq == "FY22 Q3", disagg == "KP") %>%
-  group_by(indicator) %>%
+  group_by(keypop, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop")  %>% 
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(vls = TX_PVLS_N/TX_PVLS_D,
          vlc = TX_PVLS_D/TX_CURR_Lag2) %>%
-  select(vlc, vls, TX_PVLS_D, TX_PVLS_N, TX_CURR_Lag2)
+  select(keypop, vlc, vls, TX_PVLS_D, TX_PVLS_N, TX_CURR_Lag2)
 
 measure_trends_zim_5a
 
-# ggplot(measure_trends_zim_5a, aes(x = vlc, y = vls)) + geom_point(aes(keypop)) + si_style_xyline() +  geom_text(aes(label = paste0(percent(vlc, accuracy = 1), " vlc    ", percent(vls, accuracy = 1), "vls ")))
+ggplot(measure_trends_zim_5a, aes(x = vlc, y = vls)) + geom_point(aes(color = keypop)) + si_style_xyline() + geom_text(aes(label = paste0(percent(vlc, accuracy = 1), " vlc    ", percent(vls, accuracy = 1), "vls ")))
 
 ```
 
 #### El Salvador
 
-```{r}
+```{r warning=FALSE}
 
 measure_trends_es_5a<- qcheck %>% filter(country == "El Salvador", disagg == "KP", results!=0, indicator %in% indicators_2c, fyq == "FY22 Q3", disagg == "KP") %>%
   group_by(psnu, indicator) %>%
@@ -695,5 +691,7 @@ measure_trends_es_5a<- qcheck %>% filter(country == "El Salvador", disagg == "KP
   select(psnu, vlc, vls, TX_PVLS_D, TX_PVLS_N, TX_CURR_Lag2)
 
 measure_trends_es_5a
+
+ggplot(measure_trends_es_5a, aes(x = vlc, y = vls)) + geom_point(aes(color = psnu)) + si_style_xyline() + geom_text(aes(label = paste0(percent(vlc, accuracy = 1), " vlc    ", percent(vls, accuracy = 1), "vls ")))
 
 ```
