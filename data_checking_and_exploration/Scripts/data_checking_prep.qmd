@@ -89,6 +89,8 @@ cascade_thai_pos_1 + geom_col(aes(y = sum.targets, color = "Targets", fill = "Ta
 
 ### MER Cascades Comparison
 
+we also need to see the cumulative result #s. They can be in table or printed df form but should be part of the output.
+
 #### Malawi: By KP - FSW, MSM, TG
 
 ```{r warning=FALSE}
@@ -116,6 +118,8 @@ cascade_mal_pos_2 + geom_col(aes(y = sum.targets, color = "Targets", fill = "Tar
 
 #### Thailand: By KP - FSW, MSM, TG
 
+we also need to see the cumulative result #s. They can be in table or printed df form but should be part of the output. Agency names and other filters should be in the title where possible.
+
 ```{r warning=FALSE}
 #Thailand: Prevention Cascade
 cascade_thai_prev_2 <- check %>% filter(fy == 2022, disagg == "KP", country == "Thailand", indicator %in% neg, keypop %in% kp_comp) %>%
@@ -140,6 +144,8 @@ cascade_thai_pos_2 + geom_col(aes(y = sum.targets, color = "Targets", fill = "Ta
 ```
 
 #### Malawi: IM = 81764 and 81759
+
+we also need to see the cumulative result #s. They can be in table or printed df form but should be part of the output.
 
 ```{r warning=FALSE}
 #Malawi: Prevention Cascade
@@ -187,8 +193,6 @@ cascade_thai_pos_3 + geom_col(aes(y = sum.targets, color = "Targets", fill = "Ta
 ### 1a. Indicator Comparisons:
 
 #### Cameroon: PrEP_CT, HTS_TST_POS - By KP, funding Agency
-
-###should only be 1 indicator in each view, unlike 1b
 
 ```{r warning=FALSE}
 
@@ -299,7 +303,7 @@ measure_trends_ug_kp_b %>% ggplot2::ggplot(aes(x = fyq, y = results, group = ind
 
 ### 1c. Indicator Trend Comparison
 
-#more indicators than necessary are in the view. With a few exceptions it's one at a time. Since we're checking the data, we really need to see values, even if they aren't aesthetically pleasing.
+this is great. no color legend needed though.
 
 #### Uganda by KP, by Agency
 
@@ -547,6 +551,8 @@ measure_trends_2d_all %>% ggplot2::ggplot(aes(x = fyq, y = positivity, group = 1
 
 #### Botswana
 
+great from a data viz standpoint. exact values would be helpful for data checking
+
 ```{r warning=FALSE}
 coeff <- .00001
 indicators_2e <- c("HTS_TST","HTS_TST_POS")
@@ -603,6 +609,8 @@ ggplot(measure_trends_ind_2f, aes(x = fyq)) + geom_col(aes(x = fyq, y = fytd, fi
 
 #### Mozambique
 
+needs title in chart, can you also make a trend chart by quarter for FY22+ of PrEP_NEW and PrEP_CT? It's not currently a determined view in the dashboard but soon will be.
+
 ```{r warning=FALSE}
 
 #Mozambique
@@ -622,7 +630,7 @@ measure_trends_moz_2f
 
 ### 5b. VL Comparisons
 
-Issues with this whole section
+i left this one this way so this is my doing. Can you create a table of snu1 and VLC, VLS? Print that. Then just label the snu1 instead of values in the chart. Thanks! I think you can apply this throughout
 
 #### Haiti
 
