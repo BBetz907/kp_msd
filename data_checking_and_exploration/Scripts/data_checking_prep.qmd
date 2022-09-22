@@ -594,7 +594,7 @@ ggplot(measure_trends_2e2, aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom
 
 ### 2f. PrEP Trends
 
-#### Indonesia
+#### Malawi
 
 ```{r warning=FALSE}
 indicators_2f <- c("PrEP_NEW", "PrEP_CT")
@@ -603,12 +603,12 @@ mech_2f <- c(70212,9811,13583)
 #issues with Indonesia
 
 #Indonesia
-measure_trends_ind_2f <- qcheck %>% filter(country == "Indonesia", disagg == "KP", results!=0, indicator %in% indicators_2f, keypop %in% kp_2f) %>%
+measure_trends_ind_2f <- qcheck %>% filter(country == "Malawi", disagg == "KP", results!=0, indicator %in% indicators_2f, keypop %in% kp_2f) %>%
   group_by(fy, fyq, indicator, keypop) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>%
-  pivot_wider(values_from = sum.results, names_from = indicator) %>%
-  group_by(fy) %>%
-  mutate(fytd = cumsum(PrEP_NEW))
+  pivot_wider(values_from = sum.results, names_from = indicator) %>% 
+ group_by(fy) %>% 
+  mutate(fytd = cumsum(PrEP_NEW)) %>% glimpse()
 
 ggplot(measure_trends_ind_2f, aes(x = fyq)) + geom_col(aes(x = fyq, y = fytd, fill = "FY to date")) + geom_col(aes(x = fyq, y = PrEP_NEW, fill = "PrEP_NEW"), width = 0.75) + si_style_xyline() + scale_color_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim)) + scale_fill_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim)) + facet_wrap(~keypop)
 
