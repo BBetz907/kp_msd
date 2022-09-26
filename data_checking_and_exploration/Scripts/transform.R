@@ -4,8 +4,7 @@ library(janitor)
 indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
                     "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
-df <- mer_df %>%  filter(fiscal_year >= 2021, #cumulative and targets
-                    fiscal_year < 2023,
+df <- mer_df %>%  filter(
                     str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE) %>%
                   mutate(indicator = recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
                          funding_agency = recode(funding_agency, "HHS/CDC" = "CDC")) %>%

@@ -1,3 +1,5 @@
+remotes::install_github("USAID-OHA-SI/gagglr", build_vignettes = TRUE)
+library(gagglr)
 library(glamr)
 library(keyring)
 library(tidyverse)
@@ -33,6 +35,7 @@ mer_items <- pano_content(page_url = dir_mer_path, session = sess) %>%
   pano_elements(page_url = dir_mer_path)
 # Extract MER data items details from HTML CODE
  dest_path <- paste0(si_path(),"/Temp/")
+ 
 
 # pull latest psnuXim MSD ---------------------------------------------------------
 url_psnu_im <- mer_items %>%
@@ -79,6 +82,26 @@ url_psnu_im_archive <- mer_items2 %>%
   pull(path) %>%
   first()
 
-url_psnu_im_archive
 
 pano_download(item_url = url_psnu_im_archive, session = sess)
+
+
+# Download archived regional program site-level MSDs ------------------------------------------------
+url_site_msd <- mer_items[4,4] %>% pull(path) #enter directory for FY15 - ... from mer_items
+
+mer_items3 <- pano_content(page_url = url_site_msd, session = sess) %>%
+  pano_elements(page_url = url_site_msd)
+
+# mer_items3_1 <- mer_items3[2,4] %>% pull(path)
+
+mer_site_region <- mer_items3 %>%
+  filter(type == "file zip_file",
+         str_detect(item, "Region")) %>%
+  pull(path) 
+
+mer_site_region[1]
+
+pano_download(item_url = mer_site_region[1], session = sess)
+pano_download(item_url = mer_site_region[3], session = sess)
+
+#learn how to iterate this step
