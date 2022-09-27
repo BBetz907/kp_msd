@@ -11,16 +11,18 @@ First load the package and a couple other packages
 
 ```{r chunk-label, message=FALSE, warning=FALSE, echo = false}
 library(gagglr)
+library(tidyverse)
 ```
 
 Identify the name of the latest PSNU x IM MER Structured Data Set
 
 ```{r}
 file <- glamr::return_latest("../Data/", "PSNU_IM_FY20")
+fil3 <- paste0(str_extract(file,".+(?=zip)"),"txt")
 ```
 
 Read MSD
 
 ```{r}
-mer_df <- read_msd(fil2, save_rds = FALSE, remove_txt = FALSE)
+mer_df <- read_msd(fil3, save_rds = TRUE, remove_txt = FALSE)
 ```
