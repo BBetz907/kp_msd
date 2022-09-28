@@ -1,4 +1,6 @@
 remotes::install_github("USAID-OHA-SI/gagglr", build_vignettes = TRUE)
+remotes::install_github("USAID-OHA-SI/grabr", build_vignettes = TRUE)
+library(grabr)
 library(gagglr)
 library(glamr)
 library(keyring)
@@ -7,7 +9,7 @@ library(tidyverse)
 load_secrets()
 
 
- glamr::set_paths(folderpath_msd = "Data",
+glamr::set_paths(folderpath_msd = "Data",
                    folderpath_datim =  "Data",
                    folderpath_downloads =  "Data")
 ## comment in/out the above after setting initially
