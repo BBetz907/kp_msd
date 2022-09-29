@@ -64,7 +64,7 @@ ggplot(cascade_mal_pos_1, aes(x = indicator, y = sum.cum, fill = factor(fy))) + 
 cascade_mal_pos_1
 ```
 
-#### Thailand: USAID, PEPFAR
+#### Thailand: CDC, USAID
 
 ```{r warning=FALSE}
 
@@ -409,13 +409,13 @@ measure_trends_laos_2a %>% ggplot2::ggplot(aes(x = fyq, y = results, group = ind
 
 ### 2b. TX Trends
 
-#### Vietnam
+#### Philippines
 
 ```{r warning=FALSE}
 indicators_2b <- c("TX_CURR","TX_NEW", "TX_NET_NEW")
 #Vietnam
 
-measure_trends_viet_2b <- qcheck %>% filter(country == "Vietnam", disagg == "KP", results!=0, indicator %in% indicators_2b, funding_agency %in% agency_2a, partner == "Family Health International") %>%
+measure_trends_viet_2b <- qcheck %>% filter(country == "Philippines", disagg == "KP", results!=0, indicator %in% indicators_2b, funding_agency %in% agency_2a, partner == "Family Health International") %>%
   group_by(fyq, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>% pivot_longer(TX_NEW:TX_NET_NEW, names_to = "indicator", values_to = "results") %>% na.omit()
@@ -426,14 +426,14 @@ measure_trends_viet_2b
 
 ```
 
-#### Laos: MSM Only and USAID All People
+#### South Africa: MSM Only and USAID All People
 
 ```{r warning=FALSE}
 
 #Laos
 
 #MSM Only
-measure_trends_laos_2b_msm <- qcheck %>% filter(country == "Laos", disagg == "KP", results!=0, indicator %in% indicators_2b, funding_agency == "USAID", keypop == "MSM") %>%
+measure_trends_laos_2b_msm <- qcheck %>% filter(country == "South Africa", disagg == "KP", results!=0, indicator %in% indicators_2b, funding_agency == "USAID", keypop == "MSM") %>%
   group_by(fyq, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>% pivot_longer(TX_NEW:TX_NET_NEW, names_to = "indicator", values_to = "results") %>% na.omit()
@@ -443,7 +443,7 @@ ggplot(measure_trends_laos_2b_msm, aes(x = fyq, y = results)) + geom_col(data = 
 measure_trends_laos_2b_msm
 
 #USAID All People
-measure_trends_laos_2b_all <- qcheck %>% filter(country == "Laos", results!=0, indicator %in% indicators_2b, funding_agency == "USAID", disagg == "Total") %>%
+measure_trends_laos_2b_all <- qcheck %>% filter(country == "South Africa", results!=0, indicator %in% indicators_2b, funding_agency == "USAID", disagg == "Total") %>%
   group_by(fyq, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>% pivot_longer(TX_NEW:TX_NET_NEW, names_to = "indicator", values_to = "results") %>% na.omit()
@@ -460,8 +460,6 @@ measure_trends_laos_2b_all
 
 ```{r warning=FALSE}
 indicators_2c <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2")
-
-#errors from here on out 
 
 #Kenya
 
@@ -568,6 +566,8 @@ measure_trends_2e<- qcheck %>% filter(country == "Botswana", disagg == "KP", res
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(positivity = HTS_TST_POS/HTS_TST)
 
+measure_trends_2e
+
 e1 <- ggplot(measure_trends_2e, aes(x = fyq)) + geom_col(aes(y = HTS_TST_POS)) + si_style_xyline()
 
 e2 <- ggplot(measure_trends_2e, aes(x = fyq)) + geom_line(aes(y = positivity, group = 1)) + si_style_xyline()
@@ -589,10 +589,12 @@ measure_trends_2e2 <- qcheck %>% filter(country == "India", disagg == "KP", resu
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(positivity = HTS_TST_POS/HTS_TST)
 
+measure_trends_2e2
+
 ggplot(measure_trends_2e2, aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom_line(aes(color = keypop)) + geom_area(aes(fill = keypop)) + scale_color_manual(name = "", values = c("FSW" = "#005e7a", "MSM" = "#f28965", "Prisoners" = "#990d2e", "PWID" = "#fbcc50", "TG" = "#7ecfc0", "All People" = "#a7a9ac")) + scale_fill_manual(name = "", values = c("FSW" = "#005e7a", "MSM" = "#f28965", "Prisoners" = "#990d2e", "PWID" = "#fbcc50", "TG" = "#7ecfc0", "All People" = "#a7a9ac")) + geom_text(aes(label =HTS_TST_POS))
 ```
 
-### 2f. PrEP Trends
+### 2f. PrEP Trends \*needs recoding
 
 #### Malawi
 
@@ -600,17 +602,18 @@ ggplot(measure_trends_2e2, aes(x = fyq, y = HTS_TST_POS, group = keypop)) + geom
 indicators_2f <- c("PrEP_NEW", "PrEP_CT")
 kp_2f <- c("FSW","MSM")
 mech_2f <- c(70212,9811,13583)
-#issues with Indonesia
 
-#Indonesia
+#Malawi
 measure_trends_ind_2f <- qcheck %>% filter(country == "Malawi", disagg == "KP", results!=0, indicator %in% indicators_2f, keypop %in% kp_2f) %>%
   group_by(fy, fyq, indicator, keypop) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>% 
  group_by(fy) %>% 
-  mutate(fytd = cumsum(PrEP_NEW)) %>% glimpse()
+  mutate(fytd = cumsum(PrEP_NEW))
 
-ggplot(measure_trends_ind_2f, aes(x = fyq)) + geom_col(aes(x = fyq, y = fytd, fill = "FY to date")) + geom_col(aes(x = fyq, y = PrEP_NEW, fill = "PrEP_NEW"), width = 0.75) + si_style_xyline() + scale_color_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim)) + scale_fill_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim)) + facet_wrap(~keypop)
+measure_trends_ind_2f
+
+ggplot(measure_trends_ind_2f, aes(x = fyq)) + geom_col(aes(x = fyq, y = fytd, fill = "FY to date")) + geom_col(aes(x = fyq, y = PrEP_NEW, fill = "PrEP_NEW"), width = 0.75) + si_style_xyline() + scale_color_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim)) + scale_fill_manual(name = "", values = c("FY to date" = grey10k, "PrEP_NEW" = denim))
 
 ```
 
@@ -635,7 +638,7 @@ ggplot(measure_trends_moz_2f, aes(x = fyq)) + geom_col(aes(x = fyq, y = fytd, fi
 measure_trends_moz_2f
 ```
 
-### 5b. VL Comparisons
+### 5a. VL Comparisons
 
 i left this one this way so this is my doing. Can you create a table of snu1 and VLC, VLS? Print that. Then just label the snu1 instead of values in the chart. Thanks! I think you can apply this throughout
 
@@ -644,12 +647,14 @@ i left this one this way so this is my doing. Can you create a table of snu1 and
 ```{r warning=FALSE}
 #Haiti
 measure_trends_haiti_5a<- qcheck %>% filter(country == "Haiti", disagg == "KP", results!=0, indicator %in% indicators_2c, funding_agency == "USAID", fyq == "FY22 Q3", disagg == "KP") %>%
-  group_by(snu1, indicator) %>%
+  group_by(indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop")  %>% 
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(vls = TX_PVLS_N/TX_PVLS_D,
          vlc = TX_PVLS_D/TX_CURR_Lag2) %>%
-  select(snu1, vlc, vls)
+  select(vlc, vls, TX_PVLS_N, TX_PVLS_D, TX_CURR_Lag2)
+
+measure_trends_haiti_5a
 
 ggplot(measure_trends_haiti_5a, aes(x = vlc, y = vls)) + geom_point() + si_style_xyline() + geom_text(aes(label = paste0(percent(vlc, accuracy = 1), " vlc    ", percent(vls, accuracy = 1), "vls "))) + xlim(0,1.1) + ylim(0,1.1)
 
@@ -661,17 +666,19 @@ ggplot(measure_trends_haiti_5a, aes(x = vlc, y = vls)) + geom_point() + si_style
 
 #El Salvador
 measure_trends_es_5a<- qcheck %>% filter(country == "El Salvador", results!=0, indicator %in% indicators_2c, fyq == "FY22 Q3", disagg == "KP") %>%
-  group_by(keypop, indicator) %>%
+  group_by(indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop")  %>% 
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(vls = TX_PVLS_N/TX_PVLS_D,
          vlc = TX_PVLS_D/TX_CURR_Lag2) %>%
-  select(keypop, vlc, vls)
+  select(vlc, vls, TX_PVLS_N, TX_PVLS_D, TX_CURR_Lag2)
+
+measure_trends_es_5a
 
 ggplot(measure_trends_es_5a, aes(x = vlc, y = vls)) + geom_point() + si_style_xyline() + geom_text(aes(label = paste0(percent(vlc, accuracy = 1), " vlc    ", percent(vls, accuracy = 1), "vls "))) + xlim(0,4)
 ```
 
-### 5a. VL by Geography
+### 5b. VL by Geography
 
 Issues with this whole section
 
