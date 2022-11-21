@@ -1,40 +1,39 @@
-remotes::install_github("USAID-OHA-SI/gagglr", build_vignettes = TRUE)
-remotes::install_github("USAID-OHA-SI/grabr", build_vignettes = TRUE)
-library(grabr)
+
 library(gagglr)
 library(glamr)
 library(keyring)
 library(tidyverse)
 
+# set_pano("bbetz@usaid.gov")
 load_secrets()
 
-
-glamr::set_paths(folderpath_msd = "Data",
-                   folderpath_datim =  "Data",
-                   folderpath_downloads =  "Data")
+# set_paths(folderpath_msd = "Data",
+#                    folderpath_datim =  "Data",
+#                    folderpath_downloads =  "Data")
 ## comment in/out the above after setting initially
 
 
 #create active session
 
-sess <- pano_session(username = pano_user(), password = pano_pwd())
+sess <- grabr::pano_session(username = pano_user(), password = pano_pwd())
+
 
 # Extract data items details
 url <- "https://pepfar-panorama.org/forms/downloads/"
 
-cont <- pano_content(page_url = url, session = sess)
+cont <- grabr::pano_content(page_url = url, session = sess)
 
 
 # Download most recent PSNUxIM MSD ------------------------------------------------
 # Extract data items details
-dirs <- pano_elements(page_html = cont)
+dirs <- grabr::pano_elements(page_html = cont)
 
 dir_mer_path <- dirs %>%
   filter(str_detect(item, "^MER")) %>%
   pull(path)
 
-mer_items <- pano_content(page_url = dir_mer_path, session = sess) %>%
-  pano_elements(page_url = dir_mer_path)
+mer_items <- grabr::pano_content(page_url = dir_mer_path, session = sess) %>%
+  grabr::pano_elements(page_url = dir_mer_path)
 # Extract MER data items details from HTML CODE
  dest_path <- paste0(si_path(),"/Temp/")
  
@@ -47,7 +46,7 @@ url_psnu_im <- mer_items %>%
   first()
 
 # quick fix to filepaths --------------------------------------------------
-pano_download(item_url = url_psnu_im, session = sess)
+grabr::pano_download(item_url = url_psnu_im, session = sess)
 
 
 ######################################################################################
@@ -68,14 +67,14 @@ url_nat_subnat <- mer_items %>%
   pull(path) %>%
   first()
 
-pano_download(item_url = url_nat_subnat, session = sess)
+grabr::pano_download(item_url = url_nat_subnat, session = sess)
 
 
 # Download archived PSNUxIM MSD ------------------------------------------------
 url_archived_msd <- mer_items[1,4] %>% pull(path) #enter directory for FY15 - ... from mer_items
 
-mer_items2 <- pano_content(page_url = url_archived_msd, session = sess) %>%
-  pano_elements(page_url = url_archived_msd)
+mer_items2 <- grabr::pano_content(page_url = url_archived_msd, session = sess) %>%
+  grabr::pano_elements(page_url = url_archived_msd)
 
 
 url_psnu_im_archive <- mer_items2 %>%
@@ -85,14 +84,14 @@ url_psnu_im_archive <- mer_items2 %>%
   first()
 
 
-pano_download(item_url = url_psnu_im_archive, session = sess)
+grabr::pano_download(item_url = url_psnu_im_archive, session = sess)
 
 
 # Download archived regional program site-level MSDs ------------------------------------------------
 url_site_msd <- mer_items[4,4] %>% pull(path) #enter directory for FY15 - ... from mer_items
 
-mer_items3 <- pano_content(page_url = url_site_msd, session = sess) %>%
-  pano_elements(page_url = url_site_msd)
+mer_items3 <- grabr::pano_content(page_url = url_site_msd, session = sess) %>%
+  grabr::pano_elements(page_url = url_site_msd)
 
 # mer_items3_1 <- mer_items3[2,4] %>% pull(path)
 
@@ -103,7 +102,7 @@ mer_site_region <- mer_items3 %>%
 
 mer_site_region[1]
 
-pano_download(item_url = mer_site_region[1], session = sess)
-pano_download(item_url = mer_site_region[3], session = sess)
+grabr::pano_download(item_url = mer_site_region[1], session = sess)
+grabr::pano_download(item_url = mer_site_region[3], session = sess)
 
 #learn how to iterate this step
