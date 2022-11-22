@@ -36,10 +36,10 @@ zimbabwe <- zim %>% filter(disaggregate != "KeyPop/Status") %>%
          ) %>%
   # select(operatingunit, country, snu1, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, tx_ml_reason, keypop, fy, targets, cumulative) %>%
   #also note that mech code, mech name, and partner (and TX_ML reason) are also beyond the scope of the data request so they can be removed from the select statement
-  #of course psnu can also be removed, along with keypop and disaggregate. We only need one of disagg and disaggregate--choose the simplest.
-  select( country, snu1, indicator, funding_agency, numeratordenom, disagg, fy, targets, cumulative) %>%
+  #if you were using ggplot you could remove keypop and disaggregate. We only need one of disagg and disaggregate--choose the simplest. For Tableau extra detail is less of a problem.
+  select( country, snu1, psnu, indicator, funding_agency, numeratordenom, disagg, fy, targets, cumulative) %>%
   mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>% 
-  group_by(country, snu1, indicator, funding_agency, numeratordenom, disagg, fy) %>%
+  group_by(country, snu1, psnu, indicator, funding_agency, numeratordenom, disagg, fy) %>%
   summarise(cumulative = sum(cumulative), targets = sum(targets), .groups = "drop") %>%
   #the lines above are new. Note we have shrunk the data even further.
   glimpse()
