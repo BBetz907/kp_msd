@@ -1,15 +1,14 @@
 
 library(gagglr)
-library(glamr)
 library(keyring)
 library(tidyverse)
 
 # set_pano("bbetz@usaid.gov")
 load_secrets()
 
-set_paths(folderpath_msd = "Data",
-                    folderpath_datim =  "Data",
-                    folderpath_downloads =  "Data")
+# set_paths(folderpath_msd = "Data",
+#                     folderpath_datim =  "Data",
+#                     folderpath_downloads =  "Data")
 ## comment in/out the above after setting initially
 
 
