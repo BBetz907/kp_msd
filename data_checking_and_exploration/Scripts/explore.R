@@ -97,21 +97,39 @@ ggplot(pvls_trends_country, aes(x = fyq, y = sum.results, group=funding_agency))
 # 1d ----------------------------------------------------------------------
 measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
 
-measure_trends_country <- qcheck %>% filter(country %in% sa, disagg == "KP", results!=0, indicator %in% measure_indicators) %>%
-  group_by(fyq, country, indicator) %>%
-  summarise(sum.results=sum(results)) %>%
+measure_trends_kp <- qcheck %>% filter(country == "Haiti", 
+                                       disagg == "KP", results!=0, indicator %in% measure_indicators) %>%
+  group_by(fyq, keypop, indicator) %>%
+  filter(keypop %in% c("MSM", "FSW")) %>%
+  summarise(sum.results=sum(results), .groups = "drop") %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(vls = TX_PVLS_N/TX_PVLS_D,
          vlc = TX_PVLS_D/TX_CURR_Lag2,
-         linkage = TX_NEW/HTS_TST_POS) %>% glimpse()
+         linkage = TX_NEW/HTS_TST_POS,
+         measure = vls) %>% glimpse()
 
 #note: no dedup data here, but some dedup data in dashboard
+measure_trends_kp %>% ggplot2::ggplot(aes(x = fyq, y = measure, group=keypop)) +
+  geom_line(aes(color = keypop)) +
+  geom_label(aes(label = percent(measure, accuracy = 1)))
+
+# 1d ----------------------------------------------------------------------
+measure_bars_snu1 <- qcheck %>% filter(country == "Tanzania", disagg == "KP", fyq == "FY22 Q4",
+                                       results!=0, indicator %in% measure_indicators,
+                                       keypop == "Prisoners") %>%
+  group_by(fyq, snu1, indicator) %>%
+  summarise(sum.results=sum(results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS,
+         measure = linkage) %>% 
+  glimpse()
 
 
-measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, y = vlc, group=country)) +
-  geom_line(aes(color = country)) +
-  geom_label(aes(label = percent(vlc, accuracy = 1)))
 
+measure_bars_snu1 %>% ggplot(aes(y = snu1, x=measure)) + geom_col() + 
+  geom_label(aes(label = percent(measure, accuracy = 1)))
 
 
 # 2a ----------------------------------------------------------------------
@@ -220,7 +238,7 @@ ach_country %>%
 
 # 4 Positivity ----------------------------------------------------------------------
 tst <- c("HTS_TST", "HTS_TST_POS")
-pos_by_percent <- check %>% filter(fy == "2022", funding_agency == "USAID", country == "Liberia", disagg == "KP", cumulative!=0, indicator %in% tst) %>%
+pos_by_percent <- check %>% filter(fy == "2022", funding_agency == "USAID", country == "Mali", disagg == "KP", cumulative!=0, indicator %in% tst) %>%
   group_by(keypop, indicator) %>%
   summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(values_from = sum.cumulative, names_from = indicator) %>%
@@ -233,29 +251,29 @@ pos_by_percent %>% ggplot2::ggplot(aes(x = HTS_TST, y = pos, group=keypop)) +
   geom_label(aes(label = HTS_TST, color = keypop), position = position_nudge(y=.001))
 
 #modality
-pos_by_mod <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Liberia", cumulative!=0) %>%
+pos_by_mod <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Mali", cumulative!=0) %>%
   group_by(modality, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% mutate(pos = HTS_TST_POS/HTS_TST) %>%
-  glimpse()
+  print()
 
 pos_by_mod %>% ggplot(aes(x=modality, y = pos)) + geom_point() + geom_label(aes(label = percent(pos, accuracy = 1)))
 pos_by_mod %>% ggplot(aes(x=modality, y = HTS_TST)) + geom_col() + geom_label(aes(label = HTS_TST))
 
 # percentage by age/sex
-pos_by_agesex <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Liberia", cumulative!=0) %>%
+pos_by_agesex <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Indonesia", cumulative!=0) %>%
   group_by(age, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% mutate(pos = HTS_TST_POS/HTS_TST) %>%
-  glimpse()
+  print()
 
 pos_by_agesex %>% ggplot(aes(x=age, y = pos)) + geom_point() + geom_label(aes(label = percent(pos, accuracy = 1)))
 pos_by_agesex %>% ggplot(aes(x=age, y = HTS_TST)) + geom_col() + geom_label(aes(label = HTS_TST))
 
 #
 glimpse(modality)
-pos_by_im <- modality %>% filter(fy == "2022", funding_agency == "USAID", operatingunit == "Asia Region", cumulative!=0) %>%
+pos_by_im <- modality %>% filter(fy == "2022", operatingunit == "Western Hemisphere Region", cumulative!=0) %>%
   group_by(country, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% mutate(pos = HTS_TST_POS/HTS_TST) %>%
-  glimpse()
+  print()
 
   pos_by_im %>% ggplot(aes(x=HTS_TST, y = pos, group = country)) + geom_point() + geom_label(aes(label = percent(pos, accuracy = 1))) +  geom_label(aes(label = country), position = position_nudge(y=.05, x = 1000))
 
@@ -268,7 +286,7 @@ vl <- check %>% filter(country == "Tanzania", disagg == "KP", str_detect(indicat
   summarise(sum.cum=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cum) %>%
   mutate(vls = TX_PVLS_N/TX_PVLS_D) %>%
-  glimpse() %>%
+  print() %>%
   ggplot2::ggplot(aes(x = TX_PVLS_D, y = TX_PVLS_N, fill = keypop))
 
 vl + geom_point() + geom_label(aes(label = percent(vls, accuracy = 1)))
@@ -280,9 +298,9 @@ measure_trends_partner <- check %>% filter(country=="Malawi", fy == 2022, fundin
   summarise(sum.results=sum(cumulative)) %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
   mutate(vls = TX_PVLS_N/TX_PVLS_D,
-         vlc = TX_PVLS_D/TX_CURR_Lag2,
-         linkage = TX_NEW/HTS_TST_POS,
-  ) %>% glimpse()
+         vlc = TX_PVLS_D/TX_CURR_Lag2) %>% 
+  select(partner, vlc, vls) %>%
+  print()
 
 measure_trends_partner  %>% ggplot2::ggplot(aes(x = vlc, y = vls, group=partner)) +
   geom_point() +
@@ -348,7 +366,28 @@ tab <- measure_trends_psnu %>%
 
 tab %>%   print()
 
+#################################
+kp_gp_vl_starter <- check %>% filter(country=="Malawi", fy > 2021, cumulative > 0, indicator %in% measure_indicators) %>%
+  group_by(snu1, psnu, disagg, indicator) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop")
 
+gp_vl <- kp_gp_vl_starter %>% mutate(sum.results = if_else(disagg=="KP", -sum.results, sum.results),
+                                     disagg = "GP") %>%
+  group_by(snu1, psnu, disagg, indicator) %>%   
+  summarise(sum.results=sum(sum.results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>% 
+  glimpse()
+  
+kp_gp_vl <- kp_gp_vl_starter %>% filter(disagg == "KP") %>%   pivot_wider(values_from = sum.results, names_from = indicator) %>% 
+  rbind(gp_vl) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2)
+
+kp_gp_vlc <- kp_gp_vl %>% select(snu1, psnu, disagg, vlc, TX_PVLS_D, TX_CURR_Lag2) %>% arrange(snu1, psnu, disagg) %>%
+  print(n=48)
+
+kp_gp_vls <- kp_gp_vl %>% select(snu1, psnu, disagg, vls, TX_PVLS_N, TX_PVLS_D) %>% arrange(snu1, psnu, disagg) %>%
+  print(n=48)
 
 # 6 TX ----------------------------------------------------------------------
 vl_cascade <- c("TX_CURR", "TX_PVLS_D", "TX_PVLS_N", "TX_ML")
