@@ -1,4 +1,4 @@
-
+update.packages("gagglr")
 library(gagglr)
 library(keyring)
 library(tidyverse)
@@ -42,7 +42,7 @@ url_psnu_im <- mer_items %>%
   filter(type == "file zip_file",
          str_detect(item, ".*_PSNU_IM_FY2.*.zip$")) %>%
   pull(path) %>%
-  first()
+  first() 
 
 # quick fix to filepaths --------------------------------------------------
 grabr::pano_download(item_url = url_psnu_im, session = sess)
