@@ -1,5 +1,8 @@
 library(tidyverse)
 library(janitor)
+library(gagglr)
+library(scales)
+
 
 table(mer_df$indicator)
 
@@ -14,7 +17,8 @@ df <- mer_df %>%  filter(
 
 
 check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
-  mutate(cumulative = coalesce(cumulative, 0),
+  mutate(
+        cumulative = coalesce(cumulative, 0),
          targets = coalesce(targets, 0),
          fy = fiscal_year,
          partner = prime_partner_name,
@@ -46,11 +50,13 @@ rm(df)
 
 modality <- mer_df %>% filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
                           str_detect(indicator, "HTS_TST") == TRUE) %>%
-  mutate(cumulative = coalesce(cumulative, 0),
-         targets = coalesce(targets, 0),
+  pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
+  mutate(results = coalesce(results, 0),
+         qtr = str_replace(qtr, "qtr","Q"),
          fy = fiscal_year,
+         fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr),
          age = trendscoarse) %>%
-  select(operatingunit, country, snu1, psnu, prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom, disaggregate, modality, fy, targets, cumulative, age, ageasentered, sex) %>%
+  select(operatingunit, country, snu1, psnu, prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom, disaggregate, modality, fy, fyq, results, age, ageasentered, sex) %>%
   glimpse()
 
 mmd <- mer_df %>% filter(str_detect(indicator,"TX_CURR(?!_Lag)"),

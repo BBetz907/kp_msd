@@ -10,8 +10,9 @@ read_msd() should read and unzip your data source, allowing you to save it as a 
 First load the package and a couple other packages
 
 ```{r chunk-label, message=FALSE, warning=FALSE, echo = false}
-library(gagglr)
 library(tidyverse)
+library(gagglr)
+
 ```
 
 Identify the name of the latest PSNU x IM MER Structured Data Set
