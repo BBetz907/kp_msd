@@ -1,0 +1,88 @@
+---
+title: "2abf"
+format: html
+editor: visual
+---
+
+2a
+
+```{r}
+qcheck %>%
+  filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
+         disagg == "KP",
+         country== "Cote d'Ivoire",
+         funding_agency == "USAID",
+         fy == 2022) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
+         disagg == "KP",
+         keypop == "FSW",
+         country== "Cameroon",
+         fy == 2022) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+```
+
+2b
+
+```{r}
+qcheck %>%
+  filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+         disagg == "KP",
+         country== "Cote d'Ivoire",
+         funding_agency == "USAID",
+         fy == 2022) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+         disagg == "KP",
+         keypop == "FSW",
+         country== "Cameroon",
+         fy == 2022) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+```
+
+2f
+
+```{r}
+#| echo: false
+qcheck %>%
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         disagg == "KP",
+         country== "Cote d'Ivoire",
+         funding_agency == "USAID",
+         fy == 2022) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         disagg == "KP",
+         keypop == "FSW",
+         country== "Cameroon",
+         fy == 2022) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+```
+
+```{r}
+
+```
