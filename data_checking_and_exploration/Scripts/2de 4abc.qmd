@@ -1,0 +1,116 @@
+---
+title: "7ab"
+format: html
+editor: visual
+---
+
+## 2de
+
+```{r}
+
+modality %>%
+  filter(country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022,
+         str_detect(modality,"Index|SNS")) %>%
+  select(country, indicator, modality, fyq, results) %>%
+  group_by(country, indicator, modality, fyq) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022,
+        disagg == "KP") %>%
+  select(country, indicator, funding_agency, fyq, results) %>%
+  group_by(country, indicator, funding_agency, fyq) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022) %>%
+  select(country, indicator, keypop, fyq, results) %>%
+  group_by(country, indicator, keypop, fyq) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+```
+
+4b-c
+
+```{r}
+#| echo: false
+modality %>%
+  filter(country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022) %>%
+  select(country, indicator, modality, results) %>%
+  group_by(country, indicator, modality) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022,
+        disagg == "KP") %>%
+  select(country, indicator, funding_agency, results) %>%
+  group_by(country, indicator, funding_agency) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022) %>%
+  select(country, indicator, keypop, results) %>%
+  group_by(country, indicator, keypop) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022,
+        disagg == "KP") %>%
+  select(country, indicator, snu1, results) %>%
+  group_by(country, indicator, snu1) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== "Ethiopia",
+         # funding_agency == "USAID",
+         fy == 2022,
+        disagg == "KP") %>%
+  select(country, indicator, psnu, results) %>%
+  group_by(country, indicator, psnu) %>% 
+  summarise(results = sum(results)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
