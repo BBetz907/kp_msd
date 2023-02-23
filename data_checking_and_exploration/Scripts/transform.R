@@ -74,4 +74,3 @@ rm(mer_df)
 
 table(check$funding_agency)
 
-#help("coalesce")
