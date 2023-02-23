@@ -34,7 +34,7 @@ cascade + geom_col() + geom_label(color = "white", position = position_stack(vju
 
 
 #target achievement
-ach_fsw <- check %>% filter(country == "Tanzania", disagg == "KP", fy == 2022) %>%
+ach_fsw <- check %>% filter(country == "Tanzania", disagg == "KP", fy == 2023) %>%
   group_by(keypop, indicator) %>%
   summarise(sum.cum=sum(cumulative), sum.targets=sum(targets)) %>%
   mutate(ach = sum.cum/sum.targets) %>% glimpse() %>%
@@ -47,7 +47,7 @@ ach_fsw + geom_col() + facet_grid(~ keypop) + geom_label(position = position_sta
 ### snapshot -
 
 # 1a ----------------------------------------------------------------------
-prep_ach <- check %>% filter(country == "Kenya", disagg == "KP", fy == 2022) %>%
+prep_ach <- check %>% filter(country == "Kenya", disagg == "KP", fy == 2023) %>%
   group_by(keypop, indicator) %>%
   summarise(sum.cum=sum(cumulative), sum.targets=sum(targets)) %>%
   mutate(ach = sum.cum/sum.targets) %>% glimpse() %>%
@@ -203,7 +203,7 @@ prep %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line() +
 #this one does not have anything on the plot
 
 # 3 achievement ----------------------------------------------------------------------
-ach_country <- check %>% filter(fy == 2022, funding_agency %in% usaid_cdc, country == "Laos", disagg == "KP") %>%
+ach_country <- check %>% filter(fy == 2023, funding_agency %in% usaid_cdc, country == "Laos", disagg == "KP") %>%
   group_by(funding_agency, indicator) %>%
   summarise(sum.cumulative=sum(cumulative),
             sum.targets=sum(targets)) %>%
@@ -238,7 +238,7 @@ ach_country %>%
 
 # 4 Positivity ----------------------------------------------------------------------
 tst <- c("HTS_TST", "HTS_TST_POS")
-pos_by_percent <- check %>% filter(fy == "2022", funding_agency == "USAID", country == "Mali", disagg == "KP", cumulative!=0, indicator %in% tst) %>%
+pos_by_percent <- check %>% filter(fy == "2023", funding_agency == "USAID", country == "Mali", disagg == "KP", cumulative!=0, indicator %in% tst) %>%
   group_by(keypop, indicator) %>%
   summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(values_from = sum.cumulative, names_from = indicator) %>%
@@ -251,7 +251,7 @@ pos_by_percent %>% ggplot2::ggplot(aes(x = HTS_TST, y = pos, group=keypop)) +
   geom_label(aes(label = HTS_TST, color = keypop), position = position_nudge(y=.001))
 
 #modality
-pos_by_mod <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Mali", cumulative!=0) %>%
+pos_by_mod <- modality %>% filter(fy == "2023", funding_agency == "USAID", country == "Mali", cumulative!=0) %>%
   group_by(modality, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% mutate(pos = HTS_TST_POS/HTS_TST) %>%
   print()
@@ -260,7 +260,7 @@ pos_by_mod %>% ggplot(aes(x=modality, y = pos)) + geom_point() + geom_label(aes(
 pos_by_mod %>% ggplot(aes(x=modality, y = HTS_TST)) + geom_col() + geom_label(aes(label = HTS_TST))
 
 # percentage by age/sex
-pos_by_agesex <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Indonesia", cumulative!=0) %>%
+pos_by_agesex <- modality %>% filter(fy == "2023", funding_agency == "USAID", country == "Indonesia", cumulative!=0) %>%
   group_by(age, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% mutate(pos = HTS_TST_POS/HTS_TST) %>%
   print()
@@ -270,7 +270,7 @@ pos_by_agesex %>% ggplot(aes(x=age, y = HTS_TST)) + geom_col() + geom_label(aes(
 
 #
 glimpse(modality)
-pos_by_im <- modality %>% filter(fy == "2022", operatingunit == "Western Hemisphere Region", cumulative!=0) %>%
+pos_by_im <- modality %>% filter(fy == "2023", operatingunit == "Western Hemisphere Region", cumulative!=0) %>%
   group_by(country, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% mutate(pos = HTS_TST_POS/HTS_TST) %>%
   print()
@@ -281,7 +281,7 @@ pos_by_im <- modality %>% filter(fy == "2022", operatingunit == "Western Hemisph
 
 # 5 pvls ----------------------------------------------------------------------
 #VL by KP scatter plot
-vl <- check %>% filter(country == "Tanzania", disagg == "KP", str_detect(indicator, "PVLS"), fy == 2022) %>%
+vl <- check %>% filter(country == "Tanzania", disagg == "KP", str_detect(indicator, "PVLS"), fy == 2023) %>%
   group_by(keypop, indicator) %>%
   summarise(sum.cum=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cum) %>%
@@ -293,7 +293,7 @@ vl + geom_point() + geom_label(aes(label = percent(vls, accuracy = 1)))
 
 table(targets$keypop)
 
-measure_trends_partner <- check %>% filter(country=="Malawi", fy == 2022, funding_agency == "USAID", disagg == "KP", cumulative!=0, indicator %in% measure_indicators) %>%
+measure_trends_partner <- check %>% filter(country=="Malawi", fy == 2023, funding_agency == "USAID", disagg == "KP", cumulative!=0, indicator %in% measure_indicators) %>%
   group_by(partner, indicator) %>%
   summarise(sum.results=sum(cumulative)) %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
@@ -312,7 +312,7 @@ measure_trends_partner  %>% ggplot2::ggplot(aes(x = vlc, y = vls, group=partner)
 
 
 #
-measure_trends_snu <- check %>% filter(country=="Malawi", fy == 2022, funding_agency == "USAID", country %in% sa, disagg == "KP", cumulative!=0, indicator %in% measure_indicators) %>%
+measure_trends_snu <- check %>% filter(country=="Malawi", fy == 2023, funding_agency == "USAID", country %in% sa, disagg == "KP", cumulative!=0, indicator %in% measure_indicators) %>%
   group_by(snu1, indicator) %>%
   summarise(sum.results=sum(cumulative)) %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>%
@@ -391,7 +391,7 @@ kp_gp_vls <- kp_gp_vl %>% select(snu1, psnu, disagg, vls, TX_PVLS_N, TX_PVLS_D) 
 
 # 6 TX ----------------------------------------------------------------------
 vl_cascade <- c("TX_CURR", "TX_PVLS_D", "TX_PVLS_N", "TX_ML")
-tx <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator %in% vl_cascade ) %>%
+tx <- check %>% filter(fy == 2023, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator %in% vl_cascade ) %>%
   group_by(indicator, psnu) %>%
   summarise(sum.cumulative=sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = sum.cumulative) %>%
@@ -408,20 +408,20 @@ tx %>%   arrange(desc(TX_CURR)) %>%
 
 
 #6.bc
-tx_curr <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_CURR" ) %>%
+tx_curr <- check %>% filter(fy == 2023, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_CURR" ) %>%
   group_by() %>%
   summarise(sum.cumulative=sum(cumulative)) %>%
   glimpse()
 
 
 #
-tx_ml_reason <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_ML" ) %>%
+tx_ml_reason <- check %>% filter(fy == 2023, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_ML" ) %>%
   group_by(tx_ml_reason) %>%
   summarise(sum.cumulative=sum(cumulative)) %>%
   glimpse()
 tx_ml_reason %>% ggplot(aes(y=sum.cumulative, x=tx_ml_reason)) + geom_col() + geom_label(aes(label = sum.cumulative))
 
-tx_ml_kp <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_ML" ) %>%
+tx_ml_kp <- check %>% filter(fy == 2023, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_ML" ) %>%
   group_by(keypop) %>%
   summarise(sum.cumulative=sum(cumulative)) %>%
   glimpse()
@@ -429,7 +429,7 @@ tx_ml_kp <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "N
 tx_ml_kp %>% ggplot(aes(x=sum.cumulative, y=keypop)) + geom_col() + geom_label(aes(label = sum.cumulative))
 
 # 7 MMD ----------------------------------------------------------------------
-mmd_check <- mmd %>% filter(fy == 2022, funding_agency== "USAID", country == "Zambia", indicator == "TX_CURR") %>%
+mmd_check <- mmd %>% filter(fy == 2023, funding_agency== "USAID", country == "Zambia", indicator == "TX_CURR") %>%
   group_by(arv) %>%
   summarise(sum.cumulative=sum(cumulative)) %>%
   glimpse()

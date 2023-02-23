@@ -30,7 +30,7 @@ check <- df %>% filter(disaggregate != "KeyPop/Status") %>%
   select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, tx_ml_reason, keypop, fy, targets, cumulative) %>%
   mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) 
 
-qcheck <- df %>% filter(fiscal_year >= 2021, #cumulative and targets
+qcheck <- df %>% filter(fiscal_year >= 2022, #cumulative and targets
                        str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
                        disaggregate != "KeyPop/Status") %>%
   mutate(fy = fiscal_year,
