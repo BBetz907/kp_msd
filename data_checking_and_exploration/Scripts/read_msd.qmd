@@ -6,23 +6,13 @@ editor: visual
 ---
 
 
-First load the package and a couple other packages
-
-```{r chunk-label, message=FALSE, warning=FALSE, echo = false}
-library(tidyverse)
-library(gagglr)
-
-```
 
 Identify the name of the latest PSNU x IM MER Structured Data Set
 
 ```{r}
-<<<<<<< HEAD
-file <- glamr::return_latest("../Data/", "PSNU_IM_FY2") %>% print()
-=======
+
 file <- glamr::return_latest("../Data/", "PSNU_IM_FY20") %>% print()
-fil3 <- paste0(str_extract(file,".+(?=zip)"),"txt")
->>>>>>> 03a003957da07da6d2b9b4fb29981e4167b60054
+
 ```
 
 Read MSD
