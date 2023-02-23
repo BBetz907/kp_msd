@@ -5,7 +5,6 @@ format: html
 editor: visual
 ---
 
-read_msd() should read and unzip your data source, allowing you to save it as a dataframe. It's [source](https://github.com/USAID-OHA-SI/gophr) is filepublic, and so is the [documentation](https://usaid-oha-si.github.io/gophr/reference/index.html).
 
 First load the package and a couple other packages
 
