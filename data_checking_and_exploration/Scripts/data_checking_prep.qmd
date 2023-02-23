@@ -679,19 +679,21 @@ achievement_3b
 ### 3c. OU/PSNU Achievement
 
 ```{r}
-achievement_3c <- check %>% filter(fy == 2022, disagg == "KP", country == "Honduras", indicator %in% indicators_3a) %>%
-group_by(fy, indicator) %>%
+achievement_3c <- check %>% filter(fy == 2022, disagg == "KP", country == "Honduras", funding_agency == "USAID", indicator %in% indicators_3a) %>%
+group_by(fy, indicator, psnu) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
 achievement_3c
 ```
 
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
+
 ### 3d. OU/PSNU Achievement
 
 ```{r}
 achievement_3d <- check %>% filter(fy == 2022, disagg == "KP", country == "Botswana", indicator %in% indicators_3a) %>%
-group_by(fy, indicator, funding_agency, snu1) %>%
+group_by(fy, indicator, funding_agency, psnu) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
