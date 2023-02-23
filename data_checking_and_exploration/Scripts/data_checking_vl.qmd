@@ -1,0 +1,260 @@
+---
+title: "data_checking_vl"
+format: html
+editor: visual
+---
+
+1d - Malawi
+
+```{r}
+# 1d ----------------------------------------------------------------------
+library(scales)
+measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
+glimpse(qcheck)
+measure_trends_country <- qcheck %>% filter(
+  country == "Malawi", disagg == "KP", 
+  partner %in% c("CEDEP", "Family Health International", "PAKACHERE INSTITUTE OF HEALTH AND DEVELOPMENT COMMUNICATION"),
+  funding_agency == "USAID",
+  # psnu %in% c("Cross River", "Niger", "Akwa Ibom"),
+  results!=0, indicator %in% measure_indicators) %>%
+  group_by(fyq, country, indicator, partner) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% print()
+
+#note: no dedup data here, but some dedup data in dashboard
+
+
+measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, y = linkage, group=partner)) +
+  geom_line(aes(color = partner)) +
+  geom_label(aes(label = percent(linkage, accuracy = 1))) + ylim(0,1.2)
+
+measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, group=partner)) +
+  geom_col(aes(y = HTS_TST_POS), fill = usaid_blue) +
+  geom_col(aes(y = TX_NEW), fill = grey50k, width = 0.5) + facet_wrap(~partner)
+```
+
+1d - DRC by agency
+
+```{r}
+
+
+measure_trends_country <- qcheck %>% filter(
+  country == "Democratic Republic of the Congo", disagg == "KP", 
+  results!=0, indicator %in% measure_indicators) %>%
+  group_by(fyq, country, indicator, funding_agency) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% print()
+
+#note: no dedup data here, but some dedup data in dashboard
+
+
+measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, y = linkage, group=funding_agency)) +
+  geom_line(aes(color = funding_agency)) +
+  geom_label(aes(label = percent(linkage, accuracy = 1))) + ylim(0,1.2)
+
+measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, group=funding_agency)) +
+  geom_col(aes(y = HTS_TST_POS), fill = usaid_blue) +
+  geom_col(aes(y = TX_NEW), fill = grey50k, width = 0.5) + facet_wrap(~funding_agency)
+```
+
+1e - Malawi
+
+```{r}
+
+
+measure_trends_country <- qcheck %>% filter(
+  country == "Malawi", disagg == "KP", 
+  funding_agency == "USAID",
+  results!=0, indicator %in% measure_indicators) %>%
+  group_by(fyq, country, indicator, snu1) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% print()
+
+```
+
+Data prep: GP-KP
+
+```{r}
+vl_indicators <- c("TX_CURR_Lag2", "TX_PVLS_D", "TX_PVLS_N")
+nonreporters <- c("Ghana", "Liberia", "PNG", "Indonesia", "Vietnam", "Angola")
+`%nin%`  <- Negate(`%in%`)
+
+vl_gp_kp <- check %>%
+  filter(fy == 2022 ,
+         funding_agency == "USAID", 
+         country %nin% nonreporters,
+         indicator %in% vl_indicators) %>% 
+  group_by(country, disagg, indicator) %>%
+  summarise(results = sum(cumulative), .groups = "drop") %>%
+  mutate(indicator = as.character(indicator)) 
+
+vl_kp <- vl_gp_kp %>% filter(disagg == "KP")
+  
+
+vl_gp <- vl_gp_kp %>% 
+  mutate(results = if_else(disagg ==  "KP", -results, results)) %>%
+  group_by(country, indicator) %>%
+  summarise(results = sum(results), .groups = "drop") %>%
+  mutate(disagg = "GP") %>% 
+  select(country, disagg, indicator, results)
+
+
+vl_gp_kp2 <- bind_rows(vl_gp, vl_kp) %>% 
+  pivot_wider(values_from = results, names_from = indicator) %>%
+  mutate(vlc = TX_PVLS_D/TX_CURR_Lag2,
+         vls = TX_PVLS_N/TX_PVLS_D,
+         country = fct_reorder(country, desc(country))) %>% print()
+```
+
+VLC GP-KP
+
+```{r}
+
+vl_gp_kp2 %>% ggplot(aes(y = country, x = vlc, color = disagg)) + geom_text(aes(label=scales::percent(vlc, accuracy = 1))) + scale_color_manual(values = c(KP = siei_blue, GP = grey60k)) 
+
+```
+
+```{r}
+vl_indicators <- c("TX_CURR_Lag2", "TX_PVLS_D", "TX_PVLS_N")
+nonreporters <- c("Ghana", "Liberia", "PNG", "Indonesia", "Vietnam", "Angola")
+`%nin%`  <- Negate(`%in%`)
+
+vl_gp_kp_pepfar <- check %>%
+  filter(fy %in% c(2021, 2022) ,
+         country %nin% nonreporters,
+         indicator %in% vl_indicators) %>% 
+  group_by(country, fy, disagg, indicator, funding_agency) %>%
+  summarise(results = sum(cumulative), .groups = "drop") %>%
+  mutate(indicator = as.character(indicator))
+
+vl_kp_usaid <- vl_gp_kp_pepfar %>% filter(disagg == "KP", 
+                                          funding_agency == "USAID") %>%
+  select(-funding_agency)
+  
+
+vl_gp_pepfar <- vl_gp_kp_pepfar %>% 
+  mutate(results = if_else(disagg ==  "KP", -results, results)) %>%
+  group_by(fy, country, indicator) %>%
+  summarise(results = sum(results), .groups = "drop") %>%
+  mutate(disagg = "GP") %>% 
+  select(country, disagg, indicator, fy, results)
+
+
+vl_gpkp <- bind_rows(vl_kp_usaid, vl_gp_pepfar) %>% 
+  pivot_wider(values_from = results, names_from = indicator) %>%
+  mutate(vlc = TX_PVLS_D/TX_CURR_Lag2,
+         vls = TX_PVLS_N/TX_PVLS_D,
+         country = fct_reorder(country, desc(country))) 
+
+
+vl_plot <- vl_gpkp %>% select(country, disagg, fy, vlc) %>% 
+  mutate( fystr = as.character(fy),
+          vlc = if_else(vlc>1, 1, vlc),
+          country = str_replace(country, "Democratic Republic of the Congo", "DRC"),  country = str_replace(country, "Dominican Republic", "DR"),
+           country = str_replace(country, "Cote d'Ivoire", "CDI")) %>%
+  pivot_wider(names_from = disagg, values_from = vlc, names_prefix = "VLC_") %>% 
+  filter(!is.na(VLC_KP),
+         fy == 2022) %>%
+  mutate(VLC_KP = if_else(country == "Malawi", 0.76, VLC_KP),
+         VLC_KP = if_else(country == "Philippines", 0.65, VLC_KP),
+         VLC_GP = if_else(country == "Philippines", 0.45, VLC_GP),
+    country2 = case_when(VLC_KP <0.75 ~ country),
+         mark2 = if_else(VLC_KP >= 0.75, "a", "b"),
+        country3 = case_when(VLC_KP >=0.75 ~ country),
+         mark3 = if_else(VLC_KP >= 0.75, "a", "b")
+    ) %>% 
+  glimpse()
+
+vl_plot %>% filter(country == "Malawi") %>% glimpse()
+```
+
+```{r}
+country_left <- c("Botswana", "South Africa", "Lesotho", "Zimbabwe", "Guatemala", "Lesotho", "Ethiopia", "India", "South Sudan", "India", "Nigeria", "Laos", "El Salvador", "Honduras")
+
+country_top <- c("Namibia", "DR")
+
+country_right <- c("Burundi", "Jamaica", "Togo", "Haiti", "Panama", "CDI", "Malawi")
+
+vl_plot %>% 
+  ggplot(aes(y=VLC_KP, x = VLC_KP - VLC_GP)) + geom_point(aes(color = mark3), show.legend = FALSE) + 
+  scale_color_manual(values = c("b" = trolley_grey, "a" = scooter)) + 
+     labs(x = "GAP between USAID KP and PEPFAR GP VL COVERAGE 2021", y = "USAID KP VL COVERAGE", title = "USAID KP Viral Load Coverage compared to PEPFAR GP totals",
+         subtitle = "22 countries with VLC > 75%") + si_style_xyline() + scale_y_continuous(labels = scales::percent, breaks=seq(.25, 1, 0.25),) +   
+  annotate("rect", xmin = -.1, xmax = 0.25, ymin = 0.75, ymax = 1.08, alpha = .1,fill = scooter) +
+  annotate("rect", xmin = -.6, xmax = -.1, ymin = 0.23, ymax = 0.75, alpha = .1,fill = "#ffffff") +
+  annotate("rect", xmin = -.6, xmax = -.1, ymin = 0.75, ymax = 1.08, alpha = .1,fill = golden_sand) +
+  # annotate("rect", xmin = -.1, xmax = 0.25, ymin = 0.23, ymax = 0.75, alpha = .1,fill = burnt_sienna) + 
+  # annotate("text", x = .07, y = 0.27, label = "low VLC for kp and GP", size =3.5) +
+  # annotate("text", x = -.35, y = 0.27, label = "Disparity and low KP VLC", size =3.5) +
+  annotate("text", x = -.35, y = 1.05, label = "Disparity but medium KP VLC", size =3.5) + annotate("text", x = 0.07, y = 1.05, label = "Medium to high KP VLC", size =3.5)  +
+  annotate("text", x=-.2, y = 0.18, label = "No KP TX_PVLS reported in Ghana, Liberia, Indonesia, PNG, Vietnam", color = trolley_grey) +
+  geom_text(data = . %>% filter(country %in% country_left),
+          aes(label = country), size=3, position = position_nudge(x = -.005, y=.00), hjust = 1, color = scooter) +
+    geom_text(data = . %>% filter(country %in% country_right),
+          aes(label = country), size=3, position = position_nudge(x = .005, y=.00), hjust = 0, color = scooter) + 
+   geom_text(data = . %>% filter(country %in% country_top),
+          aes(label = country), size=3, position = position_nudge(x = .00, y=.02), color = scooter)  +    geom_text(data = . %>% filter(country == "Uganda"),
+          aes(label = country), size=3, position = position_nudge(x = -.01, y=.02), hjust = 0, color = scooter)
+
+ggsave("kp_vlc_gap_high.png", width = 7, height = 6)
+
+```
+
+```{r}
+vl_plot%>% 
+  ggplot(aes(y=VLC_KP, x = VLC_KP - VLC_GP)) + geom_point(aes(color=mark2), show.legend = FALSE) + 
+  geom_text(aes(label = country2), size=3, position = position_nudge(x = -.005, y=.00), hjust = 1, color = old_rose) +
+  scale_color_manual(values = c("a" = trolley_grey, "b" = old_rose)) + 
+     labs(x = "GAP between USAID KP and PEPFAR GP VL COVERAGE", y = "USAID KP VL COVERAGE", title = "USAID KP Viral Load Coverage compared to PEPFAR GP totals",
+         subtitle = "8 of 15 countries with KP VLC <75% lag behind GP + concern over lack of reporting") + si_style_xyline() + scale_y_continuous(labels = scales::percent, breaks=seq(.25, 1, 0.25),) +   
+  annotate("rect", xmin = -.1, xmax = 0.25, ymin = 0.75, ymax = 1.08, alpha = .1,fill = scooter) +  
+  annotate("rect", xmin = -.6, xmax = -.1, ymin = 0.18, ymax = 0.75, alpha = .1,fill = old_rose) + annotate("rect", xmin = -.6, xmax = -.1, ymin = 0.75, ymax = 1.08, alpha = .1,fill = golden_sand) +   
+  annotate("rect", xmin = -.1, xmax = 0.25, ymin = 0.18, ymax = 0.75, alpha = .1,fill = burnt_sienna) + 
+  annotate("text", x = .07, y = 0.22, label = "Low VLC for kp and GP", size =3.5) + 
+  annotate("text", x = -.35, y = 0.22, label = "Disparity and low KP VLC", size =3.5) + annotate("text", x = -.35, y = 1.05, label = "Disparity but medium KP VLC", size =3.5) + annotate("text", x = 0.07, y = 1.05, label = "Medium to high KP VLC", size =3.5)  +
+  annotate("text", x=-.18, y = 0.28, label = "+No KP TX_PVLS reported in Ghana, Liberia, Indonesia, PNG, Vietnam", color = old_rose)
+  
+  
+ggsave("kp_vlc_gap.png", width = 7, height = 6)
+
+```
+
+```{r}
+vl_plot %>% 
+  ggplot(aes(y=VLC_KP, x = VLC_KP - VLC_GP)) + geom_point(aes(color = mark3), show.legend = FALSE) + 
+  scale_color_manual(values = c("b" = old_rose, "a" = scooter)) + 
+     labs(x = "GAP between USAID KP and PEPFAR GP VL COVERAGE 2021", y = "USAID KP VL COVERAGE", title = "USAID KP Viral Load Coverage compared to PEPFAR GP totals",
+         subtitle = "22 countries with VLC > 75%") + si_style_xyline() + scale_y_continuous(labels = scales::percent, breaks=seq(.25, 1, 0.25),)  +   
+  annotate("rect", xmin = -.1, xmax = 0.25, ymin = 0.75, ymax = 1.08, alpha = .1,fill = scooter) +  
+  annotate("rect", xmin = -.6, xmax = -.1, ymin = 0.18, ymax = 0.75, alpha = .1,fill = old_rose) + annotate("rect", xmin = -.6, xmax = -.1, ymin = 0.75, ymax = 1.08, alpha = .1,fill = golden_sand) +   
+  annotate("rect", xmin = -.1, xmax = 0.25, ymin = 0.18, ymax = 0.75, alpha = .1,fill = burnt_sienna) + 
+  annotate("text", x = .07, y = 0.22, label = "Low VLC for kp and GP", size =3.5) + 
+  annotate("text", x = -.35, y = 0.22, label = "Disparity and low KP VLC", size =3.5) + annotate("text", x = -.35, y = 1.05, label = "Disparity but medium KP VLC", size =3.5) + annotate("text", x = 0.07, y = 1.05, label = "Medium to high KP VLC", size =3.5)  +
+  annotate("text", x=-.18, y = 0.28, label = "+No KP TX_PVLS reported in Ghana, Liberia, Indonesia, PNG, Vietnam", color = old_rose) +
+  geom_text(data = . %>% filter(country %in% country_left),
+          aes(label = country), size=3, position = position_nudge(x = -.005, y=.00), hjust = 1, color = scooter) +
+    geom_text(data = . %>% filter(country %in% country_right),
+          aes(label = country), size=3, position = position_nudge(x = .005, y=.00), hjust = 0, color = scooter) + 
+   geom_text(data = . %>% filter(country %in% country_top),
+          aes(label = country), size=3, position = position_nudge(x = .00, y=.02), color = scooter)  +    geom_text(data = . %>% filter(country == "Uganda"),
+          aes(label = country), size=3, position = position_nudge(x = -.01, y=.02), hjust = 0, color = scooter) + 
+    geom_text(aes(label = country2), size=3, position = position_nudge(x = -.005, y=.00), hjust = 1, color = old_rose) 
+
+ggsave("kp_vlc_all.png", width = 7, height = 6)
+
+```
+
+VLS GP-KP
+
+```{r}
+vl_gp_kp2 %>% ggplot(aes(y = country, x = vls, color = disagg)) + geom_text(aes(label=scales::percent(vls, accuracy = 1))) + scale_color_manual(values = c(KP = siei_blue, GP = grey60k)) 
+```

@@ -1,0 +1,141 @@
+---
+title: "Achivement_dives"
+format: html
+editor: visual
+---
+
+## Libraries
+
+```{r}
+library(scales)
+library(gridExtra)
+library(grid)
+library(glitr)
+library(gt)
+library(ggplot2)
+library(stats)
+library(ggrepel)
+library(scales)
+
+
+```
+
+## 3a
+
+Target Achievement by agency
+
+```{r}
+ach_country <- check %>% filter(fy == 2022, funding_agency %in% usaid_cdc, country == "Zambia", disagg == "KP") %>%
+  group_by(funding_agency, indicator) %>%
+  summarise(sum.cumulative=sum(cumulative),
+            sum.targets=sum(targets)) %>%
+  mutate(ach = sum.cumulative/sum.targets) %>% print()
+
+ach_country$indicator <- factor(ach_country$indicator,
+                                levels = c("KP_PREV", "HTS_SELF", "HTS_TST",
+                                           "HTS_TST_NEG", "HTS_TST_POS", "TX_NEW",
+                                           "TX_CURR",
+                                           "TX_PVLS_D", "TX_PVLS_N", "PrEP_NEW",
+                                           "PrEP_CURR", "PrEP_CT"))
+
+ach_country %>%
+  arrange(desc(funding_agency), indicator) %>% filter(!is.na(indicator)) %>%
+    gt() %>%
+  tab_header(
+    title = "KP Target Achievement in Zambia by Agency, FY22") %>%
+  fmt_number(
+    columns = sum.cumulative,
+    decimals = 0)  %>%
+  fmt_number(
+    columns = sum.targets,
+    decimals = 0) %>%
+  fmt_percent(
+    columns = ach,
+    decimals = 0) %>%
+  cols_align(
+    align = "left",
+    columns = indicator
+  ) %>%
+  print()
+
+```
+
+Target Achievement by SNU, KP
+
+```{r}
+#| echo: false
+ach_snu <- check %>% filter(fy == 2022, funding_agency == "USAID", 
+                            country == "Vietnam", disagg == "KP", 
+                            snu1%in% c("Ha Noi", "Quang Ninh")) %>%
+  group_by(snu1, psnu, indicator) %>%
+  summarise(sum.cumulative=sum(cumulative),
+            sum.targets=sum(targets)) %>%
+  mutate(ach = sum.cumulative/sum.targets) %>% print()
+
+ach_snu$indicator <- factor(ach_snu$indicator,
+                                levels = c("KP_PREV", "HTS_SELF", "HTS_TST",
+                                           "HTS_TST_NEG", "HTS_TST_POS", "TX_NEW",
+                                           "TX_CURR",
+                                           "TX_PVLS_D", "TX_PVLS_N", "PrEP_NEW",
+                                           "PrEP_CURR", "PrEP_CT"))
+
+ach_snu %>%
+  arrange(desc(snu1), indicator) %>% filter(!is.na(indicator)) %>%
+    gt() %>%
+  tab_header(
+    title = "KP Target Achievement in Vietnam by psnu, FY22") %>%
+  fmt_number(
+    columns = sum.cumulative,
+    decimals = 0)  %>%
+  fmt_number(
+    columns = sum.targets,
+    decimals = 0) %>%
+  fmt_percent(
+    columns = ach,
+    decimals = 0) %>%
+  cols_align(
+    align = "left",
+    columns = indicator
+  ) %>%
+  print()
+```
+
+Target Achievement by SNU, Total
+
+```{r}
+#| echo: false
+ach_snub <- check %>% filter(fy == 2022, funding_agency == "USAID", 
+                            country == "Vietnam", disagg != "KP", 
+                            snu1%in% c("Ha Noi", "Quang Ninh")) %>%
+  group_by(snu1, psnu, indicator) %>%
+  summarise(sum.cumulative=sum(cumulative),
+            sum.targets=sum(targets)) %>%
+  mutate(ach = sum.cumulative/sum.targets) %>% print()
+
+ach_snub$indicator <- factor(ach_snub$indicator,
+                                levels = c("KP_PREV", "HTS_SELF", "HTS_TST",
+                                           "HTS_TST_NEG", "HTS_TST_POS", "TX_NEW",
+                                           "TX_CURR",
+                                           "TX_PVLS_D", "TX_PVLS_N", "PrEP_NEW",
+                                           "PrEP_CURR", "PrEP_CT"))
+
+ach_snub %>%
+  arrange(desc(snu1), indicator) %>% filter(!is.na(indicator)) %>%
+    gt() %>%
+  tab_header(
+    title = "KP Target Achievement in Vietnam by psnu, FY22") %>%
+  fmt_number(
+    columns = sum.cumulative,
+    decimals = 0)  %>%
+  fmt_number(
+    columns = sum.targets,
+    decimals = 0) %>%
+  fmt_percent(
+    columns = ach,
+    decimals = 0) %>%
+  cols_align(
+    align = "left",
+    columns = indicator
+  ) %>%
+  print()
+```

@@ -1,5 +1,5 @@
-update.packages("gagglr")
 library(gagglr)
+library(grabr)
 library(keyring)
 library(tidyverse)
 
@@ -16,7 +16,6 @@ load_secrets()
 
 sess <- grabr::pano_session(username = pano_user(), password = pano_pwd())
 
-
 # Extract data items details
 url <- "https://pepfar-panorama.org/forms/downloads/"
 
@@ -30,6 +29,8 @@ dirs <- grabr::pano_elements(page_html = cont)
 dir_mer_path <- dirs %>%
   filter(str_detect(item, "^MER")) %>%
   pull(path)
+
+
 
 mer_items <- grabr::pano_content(page_url = dir_mer_path, session = sess) %>%
   grabr::pano_elements(page_url = dir_mer_path)
@@ -105,3 +106,4 @@ grabr::pano_download(item_url = mer_site_region[1], session = sess)
 grabr::pano_download(item_url = mer_site_region[3], session = sess)
 
 #learn how to iterate this step
+

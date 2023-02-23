@@ -1,0 +1,169 @@
+---
+title: "data_checking_positivity-kp_disaggs-mmd"
+format: html
+editor: visual
+---
+
+\# 4 Positivity
+
+```{r warning=FALSE}
+
+tst <- c("HTS_TST", "HTS_TST_POS")
+pos_by_percent <- check %>% filter(fy == "2022", funding_agency == "USAID", country == "Liberia", disagg == "KP", cumulative!=0, indicator %in% tst) %>%
+  group_by(keypop, indicator) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(values_from = sum.cumulative, names_from = indicator) %>%
+  mutate(pos = HTS_TST_POS/HTS_TST) %>% print()
+
+
+pos_by_percent %>% ggplot2::ggplot(aes(x = HTS_TST, y = pos, group=keypop)) +
+  geom_point(aes(color = keypop)) +
+  geom_label(aes(label = percent(pos, accuracy = 1), color = keypop)) +
+  geom_label(aes(label = HTS_TST, color = keypop), position = position_nudge(y=.001))
+
+```
+
+Modality
+
+```{r}
+pos_by_mod <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Liberia", cumulative!=0) %>%
+  group_by(modality, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% 
+  mutate(pos = round(HTS_TST_POS/HTS_TST, 2)) %>%
+  print()
+
+pos_by_mod %>% ggplot(aes(x=modality, y = pos)) + geom_point() + geom_label(aes(label = percent(pos, accuracy = 1)))
+pos_by_mod %>% ggplot(aes(x=modality, y = HTS_TST)) + geom_col() + geom_label(aes(label = HTS_TST))
+```
+
+Positivity by age/sex
+
+```{r}
+pos_by_agesex <- modality %>% filter(fy == "2022", funding_agency == "USAID", country == "Liberia", cumulative!=0) %>%
+  group_by(age, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% 
+  mutate(pos = round(HTS_TST_POS/HTS_TST, 2)) %>%
+  print()
+
+pos_by_agesex %>% ggplot(aes(x=age, y = pos)) + geom_point() + geom_label(aes(label = percent(pos, accuracy = 1)))
+pos_by_agesex %>% ggplot(aes(x=age, y = HTS_TST)) + geom_col() + geom_label(aes(label = HTS_TST))
+```
+
+```{r}
+glimpse(modality)
+pos_by_im <- modality %>% filter(fy == "2022", funding_agency == "USAID", operatingunit == "West Africa Region", cumulative!=0) %>%
+  group_by(country, indicator) %>% summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(names_from = indicator, values_from = sum.cumulative) %>% 
+  mutate(pos = round(HTS_TST_POS/HTS_TST, 2)) %>%
+  print()
+
+  pos_by_im %>% ggplot(aes(x=HTS_TST, y = pos, group = country)) + geom_point() + geom_label(aes(label = percent(pos, accuracy = 1))) +  geom_label(aes(label = country), position = position_nudge(y=.05, x = 1000))
+```
+
+TX and VL reporting
+
+```{r}
+vl_cascade <- c("TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
+tx <- check %>% filter(fy == 2022,  disagg == "KP", 
+                       indicator %in% vl_cascade,
+                       # funding_agency == "USAID",
+                       # mech_code %in% c(81211, 81296, 82199, 83017, 85069)
+                       ) %>%
+  group_by(indicator, country) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  pivot_wider(names_from = indicator, values_from = sum.cumulative) %>%
+  print()
+
+tx %>%   arrange(desc(TX_CURR)) %>%
+  gt() %>% 
+  cols_align(
+    align = "left",
+    columns = country
+  ) %>%
+  print()
+```
+
+Continuity
+
+```{r}
+cont <- c("TX_CURR", "TX_NET_NEW", "TX_NEW", "TX_RTT", "TX_ML")
+
+tx_curr <- qcheck %>% filter(fy == 2022, indicator %in% cont ,
+                             funding_agency== "USAID",
+                             country == "Zimbabwe") %>%
+  group_by(fyq, indicator, disagg) %>%
+  summarise(sum.results=sum(results)) %>%
+  pivot_wider(names_from = fyq, values_from = sum.results) %>%
+  mutate(indicator = factor(indicator, levels = cont)) %>% arrange(indicator)
+
+tx_curr %>%
+  filter(disagg == "KP") %>%
+  print()
+
+tx_curr %>%
+  filter(disagg != "KP") %>%
+  print()
+```
+
+TX_ML
+
+assign color values to specific dimensions for both charts (2nd is patched up)
+
+```{r}
+tx_ml_reason <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_ML" ) %>%
+  group_by(tx_ml_reason) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  glimpse()
+
+tx_ml_reason %>% ggplot(aes(y=sum.cumulative, x=tx_ml_reason)) + geom_col() + geom_label(aes(label = sum.cumulative))
+
+
+
+tx_ml_100 <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_ML" ) %>%
+  group_by(tx_ml_reason, keypop) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  group_by(keypop) %>% 
+  mutate(perc = percent(sum.cumulative/sum(sum.cumulative), accuracy = 1)) %>%
+  print()
+
+tx_ml_100 %>% ggplot(aes(x=sum.cumulative, y=keypop, fill = tx_ml_reason)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = c("#ceb966", "#cfc3ff", "#877ec9", "#5e599f", "#7ecfc0")) + geom_text(aes(label = perc), position = position_fill(vjust = .5)) +
+    scale_x_continuous(labels = scales::percent_format())
+
+#2 - "#69676d", 
+
+
+group <- c("FSW", "MSM","People in prison and other closed settings", "PWID", "TG")
+tx_ml_kp <- check %>% filter(fy == 2022, funding_agency== "USAID", country == "Nepal", disagg == "KP", indicator == "TX_ML" ) %>%
+  group_by(keypop) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+    mutate(keypop = factor(keypop, levels = group)) %>% 
+  arrange(keypop) %>%
+  print()
+
+
+tx_ml_kp %>%
+ggplot(aes(x=sum.cumulative, y=(keypop))) + geom_col() + geom_label(aes(label = sum.cumulative))
+
+```
+
+MMD
+
+```{r}
+mmd_check <- mmd %>% filter(fy == 2022, funding_agency== "USAID", country == "Haiti", indicator == "TX_CURR") %>%
+  group_by(arv) %>%
+  summarise(sum.cumulative=sum(cumulative)) %>%
+  glimpse()
+
+mmd_check$arv <- factor(mmd_check$arv,
+                                levels = c("Less than 3 months", "3 to 5 months", "6 or more months"))
+
+mmd_check %>% arrange(arv) %>%
+  gt() %>%
+  cols_align(
+    align = "left",
+    columns = arv
+  ) %>%
+  print()
+```

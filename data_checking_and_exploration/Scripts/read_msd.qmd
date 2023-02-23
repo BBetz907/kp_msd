@@ -18,12 +18,11 @@ library(gagglr)
 Identify the name of the latest PSNU x IM MER Structured Data Set
 
 ```{r}
-file <- glamr::return_latest("../Data/", "PSNU_IM_FY20") %>% print()
-# fil3 <- paste0(str_extract(file,".+(?=zip)"),"txt")
+file <- glamr::return_latest("../Data/", "PSNU_IM_FY2") %>% print()
 ```
 
 Read MSD
 
 ```{r}
-mer_df <- read_msd(file, save_rds = TRUE, remove_txt = FALSE)
+mer_df <- gophr::read_psd(file, save_rds = TRUE, remove_txt = FALSE)
 ```

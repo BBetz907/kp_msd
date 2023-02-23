@@ -1,0 +1,63 @@
+---
+title: "kp_prep"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+```{r}
+library(scales)
+library(gridExtra)
+library(grid)
+library(glitr)
+library(ggplot2)
+library(stats)
+library(ggrepel)
+library(scales)
+library(janitor)
+library(tidyverse)
+library(glue)
+```
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+nudge_space <- 0.125
+
+prep_new_kpoftotal <- check %>% filter(funding_agency == "USAID", cumulative!=0, indicator == "PrEP_NEW") %>%
+  group_by(fy, disaggregate) %>%
+  summarise(sum.results=sum(cumulative), .groups = 'drop') %>% 
+  pivot_wider(names_from = disaggregate, values_from = sum.results) %>% 
+  clean_names() %>% 
+  rename(kp = key_pop, total = total_numerator) %>%
+  mutate(percentkp = kp/total) %>%
+  glimpse()
+
+ggplot(prep_new_kpoftotal, aes(x = fy)) + 
+  scale_x_continuous(breaks= pretty_breaks(n = 2)) +
+  geom_area(aes(y = total), width = 0.5, fill = grey10k) +   
+  geom_area(aes(y = kp), width = 0.5, fill = old_rose) + 
+  geom_text(aes(y = kp, label = percent(percentkp, accuracy = 1)), position = position_nudge(y = 20000), color = old_rose) +     labs(x = NULL, y = NULL, title = "USAID KP PrEP_NEW & % of agency total") +
+  scale_y_continuous(labels = label_number_si()) + 
+  si_style() +     scale_color_identity() +
+    si_style_ygrid() 
+
+  si_save(glue("Graphics/prep_kp.svg"), height = 4.5, width = 3, scale = 1)
+  si_save(glue("Graphics/prep_kp.png"), height = 4.5, width = 3, scale = 1)
+
+
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
