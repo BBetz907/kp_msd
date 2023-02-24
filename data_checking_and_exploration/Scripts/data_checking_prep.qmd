@@ -16,8 +16,6 @@ pick <- function(condition){function(d) d %>% filter_(condition)}
 
 ### MER Cascades by FY
 
-#### Ghana
-
 ```{r warning=FALSE}
 pos <-  c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
 neg <-  c("KP_PREV","HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT", "PrEP_CURR")
@@ -29,22 +27,22 @@ thai_agency <- c("USAID","PEPFAR")
 
 ```{r warning=FALSE}
 
-#Malawi: Prevention Cascade, FY
-cascade_mal_prev_1 <- check %>% filter(fy < 2023, disagg == "KP", country == "Ghana", indicator %in% neg) %>%
+#Prevention Cascade, FY
+cascade_mal_prev_1 <- check %>% filter(fy == 2023, disagg == "KP", country == "Cameroon", indicator %in% neg) %>%
 group_by(fy, indicator) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_mal_prev_1, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + labs(title = "Prevention cascade Malawi", subtitle = mal_im) + labs(title = "Malawi Prevention Cascade, IM=81764,81759") + facet_wrap(~ fy)
+ggplot(cascade_mal_prev_1, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + labs(title = "Prevention cascade Benin", subtitle = mal_im) + labs(title = "Benin Prevention Cascade, IM=81764,81759") + facet_wrap(~ fy)
 
 cascade_mal_prev_1
 
-#Malawi: Prevention Cascade, by FYQ
-cascade_mal_prev_q <- qcheck %>% filter(fy == 2022, disagg == "KP", country == "Ghana", indicator %in% neg) %>%
+#Prevention Cascade, by FYQ
+cascade_mal_prev_q <- qcheck %>% filter(fy == 2023, disagg == "KP", country == "Cameroon", indicator %in% neg) %>%
 group_by(fyq, indicator) %>% 
 summarise(sum.results=sum(results), .groups = 'drop') 
 
-ggplot(cascade_mal_prev_q, aes(x = indicator, y = sum.results, fill = factor(fyq))) + geom_col(aes(y=sum.results, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_text(position = position_stack(vjust = 0.3), aes(label = sum.results), color = "#ffffff") + si_style_xyline() + scale_color_manual(name = "", values = c("Cumulative" = denim)) + scale_fill_manual(name = "", values = c("Cumulative" = denim)) + labs(title = "Prevention Cascade Malawi", subtitle = mal_im) + labs(title = "Malawi Prevention Cascade, IM=81764,81759") + facet_wrap(~ fyq)
+ggplot(cascade_mal_prev_q, aes(x = indicator, y = sum.results, fill = factor(fyq))) + geom_col(aes(y=sum.results, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_text(position = position_stack(vjust = 0.3), aes(label = sum.results), color = "#ffffff") + si_style_xyline() + scale_color_manual(name = "", values = c("Cumulative" = denim)) + scale_fill_manual(name = "", values = c("Cumulative" = denim)) + labs(title = "Prevention Cascade Benin", subtitle = mal_im) + labs(title = "Benin Prevention Cascade, IM=81764,81759") + facet_wrap(~ fyq)
 
 cascade_mal_prev_q
 ```
@@ -52,168 +50,111 @@ cascade_mal_prev_q
 ##### Positive Cascade
 
 ```{r warning=FALSE}
-#Malawi: Positive Cascade
-cascade_mal_pos_1 <- check %>% filter(fy <2023, disagg == "KP", country == "Ghana", indicator %in% pos) %>%
+#Positive Cascade
+cascade_mal_pos_1 <- check %>% filter(fy == 2023, disagg == "KP", country == "Cameroon", indicator %in% pos) %>%
 group_by(fy, indicator) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_mal_pos_1, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + labs(title = "Malawi Positive Cascade, IM=81764,81759") + facet_grid(fy ~ c("1"))
+ggplot(cascade_mal_pos_1, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + labs(title = "Benin Positive Cascade") + facet_grid(fy ~ c("1"))
 
 cascade_mal_pos_1
 
 #Malawi: Positive Cascade, by FYQ
-cascade_mal_pos_q <- qcheck %>% filter(fy == 2022, disagg == "KP", country == "Ghana", indicator %in% pos) %>%
+cascade_mal_pos_q <- qcheck %>% filter(fy == 2023, disagg == "KP", country == "Cameroon", indicator %in% pos) %>%
 group_by(fyq, indicator) %>% 
 summarise(sum.results=sum(results), .groups = 'drop') 
 
-ggplot(cascade_mal_pos_q, aes(x = indicator, y = sum.results, fill = factor(fyq))) + geom_col(aes(y=sum.results, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_text(position = position_stack(vjust = 0.3), aes(label = sum.results), color = "#ffffff") + si_style_xyline() + scale_color_manual(name = "", values = c("Cumulative" = denim)) + scale_fill_manual(name = "", values = c("Cumulative" = denim)) + labs(title = "Positive Cascade Malawi", subtitle = mal_im) + labs(title = "Malawi Positive Cascade, IM=81764,81759") + facet_wrap(~ fyq)
+ggplot(cascade_mal_pos_q, aes(x = indicator, y = sum.results, fill = factor(fyq))) + geom_col(aes(y=sum.results, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_text(position = position_stack(vjust = 0.3), aes(label = sum.results), color = "#ffffff") + si_style_xyline() + scale_color_manual(name = "", values = c("Cumulative" = denim)) + scale_fill_manual(name = "", values = c("Cumulative" = denim)) + labs(title = "Positive Cascade Benin", subtitle = mal_im) + labs(title = "Benin Positive Cascade") + facet_wrap(~ fyq)
 
 cascade_mal_pos_q
 ```
 
-#### Philippines
-
-```{r warning=FALSE}
-
-#Thailand: Prevention Cascade
-cascade_thai_prev_1 <- check %>% filter(fy == 2022, disagg == "KP", country == "Philippines",  funding_agency == "USAID", indicator %in% neg) %>%
-group_by(indicator) %>%
-summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
-  mutate(ach = sum.cum/sum.targets)
-
-ggplot(cascade_thai_prev_1, aes(x = indicator, y = sum.cum)) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + labs(title = "CDC Thailand Prevention Cascade")
-
-cascade_thai_prev_1
-
-#Thailand: Positive Cascade
-cascade_thai_pos_1 <- check %>% filter(fy == 2022, disagg == "KP", country == "Philippines",  funding_agency == "USAID", indicator %in% pos) %>%
-group_by(indicator) %>%
-summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
-  mutate(ach = sum.cum/sum.targets)
-
-ggplot(cascade_thai_pos_1, aes(x = indicator, y = sum.cum)) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e"))   + labs(title = "USAID Thailand Positive Cascade")
-
-cascade_thai_pos_1
-```
-
 ### MER Cascades Comparison
 
-we also need to see the cumulative result #s. They can be in table or printed df form but should be part of the output.
-
-#### Ghana: By KP - FSW, MSM, TG
+#### By KP - FSW, MSM, TG
 
 ```{r warning=FALSE}
 kp_comp <- c("FSW","MSM","TG")
 
-#Malawi: Prevention Cascade
-cascade_mal_prev_2 <- check %>% filter(fy == 2022, disagg == "KP", country == "Ghana", indicator %in% neg, keypop %in% kp_comp) %>%
+#Prevention Cascade
+cascade_mal_prev_2 <- check %>% filter(fy == 2023, disagg == "KP", country == "Ethiopia", indicator %in% neg, keypop %in% kp_comp) %>%
 group_by(indicator, keypop) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_mal_prev_2, aes(x = indicator, y = sum.cum)) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.3), aes(label = sum.cum), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~keypop) + labs(title = "Malawi Prevention Cascade")
+ggplot(cascade_mal_prev_2, aes(x = indicator, y = sum.cum)) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.3), aes(label = sum.cum), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~keypop) + labs(title = "Ethiopia Prevention Cascade")
 
 cascade_mal_prev_2
 
-#Malawi: Positive Cascade
-cascade_mal_pos_2 <- check %>% filter(fy == 2022, disagg == "KP", country == "Ghana", indicator %in% pos, keypop %in% kp_comp) %>%
+#Positive Cascade
+cascade_mal_pos_2 <- check %>% filter(fy == 2023, disagg == "KP", country == "Ethiopia", indicator %in% pos, keypop %in% kp_comp) %>%
 group_by(indicator, keypop) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_mal_pos_2, aes(x = indicator, y = sum.cum)) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.3), aes(label = sum.cum), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~keypop)+ labs(title = "Malawi Positive Cascade")
+ggplot(cascade_mal_pos_2, aes(x = indicator, y = sum.cum)) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.3), aes(label = sum.cum), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~keypop)+ labs(title = "Ethiopia Positive Cascade")
 
 cascade_mal_pos_2
 
 ```
 
-#### Philippines: By KP - FSW, MSM, TG
-
-we also need to see the cumulative result #s. They can be in table or printed df form but should be part of the output. Agency names and other filters should be in the title where possible.
+#### By IM
 
 ```{r warning=FALSE}
-#Thailand: Prevention Cascade
-cascade_thai_prev_2 <- check %>% filter(fy == 2022, disagg == "KP", country == "Philippines", indicator %in% neg, keypop %in% kp_comp) %>%
-group_by(fy, indicator, keypop) %>%
-summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
-  mutate(ach = sum.cum/sum.targets)
-
-ggplot(cascade_thai_prev_2, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~keypop)+ labs(title = "Thailand KP Prevention Cascade")
-
-cascade_thai_prev_2
-
-#Thailandi: Positive Cascade
-cascade_thai_pos_2 <- check %>% filter(fy == 2022, disagg == "KP", country == "Philippines", indicator %in% pos, keypop %in% kp_comp) %>%
-group_by(fy, indicator, keypop) %>%
-summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
-  mutate(ach = sum.cum/sum.targets)
-
-ggplot(cascade_thai_pos_2, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~keypop)+ labs(title = "Thailand KP Positive Cascade")
-
-cascade_thai_pos_2
-```
-
-#### Malawi: IM = 81764 and 81759
-
-we also need to see the cumulative result #s. They can be in table or printed df form but should be part of the output.
-
-```{r warning=FALSE}
-#Malawi: Prevention Cascade
-cascade_mal_prev_3 <- check %>% filter(fy == 2022, disagg == "KP", country == "Malawi", mech_code %in% mal_im, indicator %in% neg) %>%
+#Prevention Cascade
+cascade_mal_prev_3 <- check %>% filter(fy == 2023, disagg == "KP", country == "El Salvador",indicator %in% neg) %>%
 group_by(fy, indicator, mech_code) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_mal_prev_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~mech_code) + labs(title = "Malawi KP Prevention Cascade, IM = 81764 and 81759")
+ggplot(cascade_mal_prev_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~mech_code) + labs(title = "El Salvador KP Prevention Cascade, IM = 81764 and 81759")
 
 cascade_mal_prev_3
 
-#Malawi: Positive Cascade
-cascade_mal_pos_3 <- check %>% filter(fy == 2022, disagg == "KP", country == "Malawi", mech_code %in% mal_im, indicator %in% pos) %>%
+#Positive Cascade
+cascade_mal_pos_3 <- check %>% filter(fy == 2023, disagg == "KP", country == "El Salvador", indicator %in% pos) %>%
 group_by(fy, indicator, mech_code) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_mal_pos_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~mech_code)+ labs(title = "Malawi KP Positive Cascade, IM = 81764 and 81759")
+ggplot(cascade_mal_pos_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~mech_code)+ labs(title = "El Salvador KP Positive Cascade, IM = 81764 and 81759")
 
 cascade_mal_pos_3
 
 ```
 
-#### Thailand: By agency
+#### By Agency
 
 ```{r warning=FALSE}
-#Thailand: Prevention Cascade
-cascade_thai_prev_3 <- check %>% filter(fy == 2022, disagg == "KP", country == "Thailand", indicator %in% neg) %>%
+#Prevention Cascade
+cascade_thai_prev_3 <- check %>% filter(fy == 2023, disagg == "KP", country == "Haiti", indicator %in% neg) %>%
 group_by(indicator, funding_agency) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_thai_prev_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~funding_agency) + labs(title = "Thailand Prevention Cascade, By Agency")
+ggplot(cascade_thai_prev_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~funding_agency) + labs(title = "Haiti Prevention Cascade, By Agency")
 
 cascade_thai_prev_3
 
-#Thailand: Positive Cascade
-cascade_thai_pos_3 <- check %>% filter(fy == 2022, disagg == "KP", country == "Thailand", indicator %in% pos) %>%
+#Positive Cascade
+cascade_thai_pos_3 <- check %>% filter(fy == 2023, disagg == "KP", country == "Haiti", indicator %in% pos) %>%
 group_by(indicator, funding_agency) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
 
-ggplot(cascade_thai_pos_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~funding_agency) + labs(title = "Thailand Positive Cascade, By Agency")
+ggplot(cascade_thai_pos_3, aes(x = indicator, y = sum.cum, fill = factor(fy))) + geom_col(aes(y = sum.targets, color = "Targets", fill = "Targets")) + geom_col(aes(y=sum.cum, color = "Cumulative", fill = "Cumulative"), width = 0.75) + geom_label(position = position_stack(vjust = 0.9), aes(label = percent(ach, accuracy = 1, color = "Achievement", fill="Achievement")), fill = "#ee636e") + si_style_xyline() + scale_color_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + scale_fill_manual(name = "", values = c("Targets" = grey10k, "Cumulative" = denim, "Achievement" = "#ee636e")) + facet_wrap(~funding_agency) + labs(title = "Haiti Positive Cascade, By Agency")
 
 cascade_thai_pos_3
 ```
 
 ### 1a. Indicator Comparisons:
 
-#### Dominican Republic: PrEP_CT, HTS_TST_POS - By KP, funding Agency
+#### PrEP_CT, HTS_TST_POS - By KP, funding Agency
 
 ```{r warning=FALSE}
 
 indicator_1a <- c("PrEP_CT","HTS_TST_POS")
-
-#Cameroon
 
 #By KP
 measure_trends_cam_kp_prep <- check %>% filter(fy == 2022, disagg == "KP", country == "Dominican Republic", indicator =="PrEP_CT") %>%
@@ -249,7 +190,7 @@ ggplot(measure_trends_cam_fa_hts, aes(funding_agency, sum.cumulative)) + geom_co
 
 ```
 
-#### Ethiopia: PrEP_CT, HTS_TST_POS - By KP, funding Agency
+#### PrEP_CT, HTS_TST_POS - By KP, funding Agency
 
 ```{r warning=FALSE}
 #Uganda
@@ -289,97 +230,53 @@ ggplot(measure_trends_ug_fa_hts, aes(funding_agency, sum.cumulative)) + geom_col
 
 ### 1b. Indicator Trends: HTS_TST, HTS_TST_POS
 
-#### Dominican Republic
-
 ```{r warning=FALSE}
 indicator_1b <- c("HTS_TST","HTS_TST_POS")
 
 #Uganda
-measure_trends_ug_kp_b <- qcheck %>% filter(country == "Dominican Republic", disagg == "KP", results!=0, indicator %in% indicator_1b, funding_agency == "USAID") %>%
+measure_trends_ug_kp_b <- qcheck %>% filter(country == "Laos", disagg == "KP", results!=0, indicator %in% indicator_1b, funding_agency == "USAID") %>%
   group_by(fyq, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>%
   pivot_wider(values_from = sum.results, names_from = indicator) %>% pivot_longer(cols = HTS_TST:HTS_TST_POS, names_to = "indicator", values_to = "results") %>% na.omit()
 
-measure_trends_ug_kp_b %>% ggplot2::ggplot(aes(x = fyq, y = results, group = indicator)) + geom_line(aes(color = indicator)) +   geom_text(position = position_stack(), aes(label = results)) + si_style_xyline() + labs(title = "Uganda: HTS_TST and HTS_TST_POS") 
-```
-
-#### El Salvador
-
-```{r warning=FALSE}
-
-#Mozambique, PEPFAR
-measure_trends_ug_kp_b <- qcheck %>% filter(country == "El Salvador", disagg == "KP", results!=0, indicator %in% indicator_1b) %>%
-  group_by(fyq, indicator) %>%
-  summarise(sum.results=sum(results), .groups = "drop") %>%
-  pivot_wider(values_from = sum.results, names_from = indicator) %>% pivot_longer(cols = HTS_TST:HTS_TST_POS, names_to = "indicator", values_to = "results") %>% na.omit()
-
-measure_trends_ug_kp_b %>% ggplot2::ggplot(aes(x = fyq, y = results, group = indicator)) + geom_line(aes(color = indicator)) + geom_text(position = position_stack(), aes(label = results)) + si_style_xyline() + labs(title = "Mozambique: HTS_TST and HTS_TST_POS") 
+measure_trends_ug_kp_b %>% ggplot2::ggplot(aes(x = fyq, y = results, group = indicator)) + geom_line(aes(color = indicator)) +   geom_text(position = position_stack(), aes(label = results)) + si_style_xyline() + labs(title = "Laos: HTS_TST and HTS_TST_POS") 
 ```
 
 ### 1c. Indicator Trend Comparison
 
-#### Dominican Republic by KP, by Agency
+#### By KP
 
 ```{r warning=FALSE}
-#Uganda
-
 #By KP
-measure_trends_ug_kp_1c_hts <- qcheck %>% filter(country == "Dominican Republic", disagg == "KP", results!=0, indicator== "HTS_TST") %>%
+measure_trends_ug_kp_1c_hts <- qcheck %>% filter(country == "Laos", disagg == "KP", results!=0, indicator== "HTS_TST", funding_agency == "USAID") %>%
   group_by(fyq, keypop) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
 
 measure_trends_ug_kp_1c_hts %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~keypop) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Uganda: HTS_TST by KP") + theme(legend.position = "none")
 
-measure_trends_ug_kp_1c_hts_pos <- qcheck %>% filter(country == "Dominican Republic", disagg == "KP", results!=0, indicator== "HTS_TST_POS") %>%
+measure_trends_ug_kp_1c_hts_pos <- qcheck %>% filter(country == "Laos", disagg == "KP", results!=0, indicator== "HTS_TST_POS", funding_agency == "USAID") %>%
   group_by(fyq, keypop) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
 
-measure_trends_ug_kp_1c_hts_pos %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~keypop) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Uganda: HTS_TST_POS by KP") + theme(legend.position = "none")
+measure_trends_ug_kp_1c_hts_pos %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~keypop) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Kenya: HTS_TST_POS by KP") + theme(legend.position = "none")
+```
 
-#By Funding Agency
-measure_trends_ug_fa_1c_hts <- qcheck %>% filter(country == "Dominican Republic", disagg == "KP", results!=0, indicator== "HTS_TST") %>%
+#### By Agency
+
+```{r warning=FALSE}
+
+measure_trends_ug_fa_1c_hts <- qcheck %>% filter(country == "Kenya", disagg == "KP", results!=0, indicator== "HTS_TST") %>%
   group_by(fyq, funding_agency) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
 
 measure_trends_ug_fa_1c_hts %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~funding_agency) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Uganda: HTS_TST by Funding Agency") + theme(legend.position = "none") 
 
-measure_trends_ug_fa_1c_hts_pos <- qcheck %>% filter(country == "Dominican Republic", disagg == "KP", results!=0, indicator== "HTS_TST_POS") %>%
+measure_trends_ug_fa_1c_hts_pos <- qcheck %>% filter(country == "Kenya", disagg == "KP", results!=0, indicator== "HTS_TST_POS") %>%
   group_by(fyq, funding_agency) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
 
 measure_trends_ug_fa_1c_hts_pos %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~funding_agency) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Uganda: HTS_TST_POS by Funding Agency") + theme(legend.position = "none") 
-```
 
-#### El Salvador by KP, by Agency
-
-```{r warning=FALSE}
-#Mozambique
-
-#By KP
-measure_trends_moz_kp_1c_hts <- qcheck %>% filter(country == "El Salvador", disagg == "KP", results!=0, indicator== "HTS_TST") %>%
-  group_by(fyq, keypop) %>%
-  summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
-
-measure_trends_moz_kp_1c_hts %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~keypop) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Mozambique: HTS_TST by KP") + theme(legend.position = "none")
-
-measure_trends_moz_kp_1c_hts_pos <- qcheck %>% filter(country == "El Salvador", disagg == "KP", results!=0, indicator== "HTS_TST_POS") %>%
-  group_by(fyq, keypop) %>%
-  summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
-
-measure_trends_moz_kp_1c_hts_pos %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~keypop) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Mozambique: HTS_TST_POS by KP") + theme(legend.position = "none") 
-
-#By Funding Agency
-measure_trends_moz_fa_1c_hts <- qcheck %>% filter(country == "El Salvador", disagg == "KP", results!=0, indicator== "HTS_TST") %>%
-  group_by(fyq, funding_agency) %>%
-  summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
-
-measure_trends_moz_fa_1c_hts %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~funding_agency) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Mozambique: HTS_TST by Funding Agency") + theme(legend.position = "none") 
-
-measure_trends_moz_fa_1c_hts_pos <- qcheck %>% filter(country == "El Salvador", disagg == "KP", results!=0, indicator== "HTS_TST_POS") %>%
-  group_by(fyq, funding_agency) %>%
-  summarise(sum.results=sum(results), .groups = "drop") %>% na.omit()
-
-measure_trends_moz_fa_1c_hts_pos %>% ggplot2::ggplot(aes(x = fyq, y = sum.results)) + geom_line(aes(color = sum.results), group = 1) + si_style_xyline() + facet_wrap(~funding_agency) + geom_text(position = position_stack(), aes(label = sum.results)) + labs(title = "Mozambique: HTS_TST_POS by Funding Agency") + theme(legend.position = "none") 
 ```
 
 ### 2a. Testing and Linkage Trends
@@ -653,7 +550,7 @@ check values using the table, need to work on figure later
 ```{r}
 indicators_all <- c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N", "KP_PREV","HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT", "PrEP_CURR")
 
-achievement_3a <- check %>% filter(fy == 2022, disagg == "KP", country == "Ghana", indicator %in% indicators_3a) %>%
+achievement_3a <- check %>% filter(fy == 2023, disagg == "KP", country == "Malawi", indicator %in% indicators_3a) %>%
 group_by(fy, indicator, funding_agency) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
@@ -668,7 +565,7 @@ achievement_3a
 ### 3b. Mech/Partner Achievement
 
 ```{r}
-achievement_3b <- check %>% filter(fy == 2022, disagg == "KP", country == "Ethiopia", indicator %in% indicators_3a) %>%
+achievement_3b <- check %>% filter(fy == 2023, disagg == "KP", country == "Brazil", indicator %in% indicators_3a) %>%
 group_by(fy, indicator, mech_code, partner) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
@@ -679,7 +576,7 @@ achievement_3b
 ### 3c. OU/PSNU Achievement
 
 ```{r}
-achievement_3c <- check %>% filter(fy == 2022, disagg == "KP", country == "Honduras", funding_agency == "USAID", indicator %in% indicators_3a) %>%
+achievement_3c <- check %>% filter(fy == 2023, disagg == "KP", country == "Tanzania", funding_agency == "USAID", indicator %in% indicators_3a) %>%
 group_by(fy, indicator, psnu) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)
@@ -692,7 +589,7 @@ achievement_3c
 ### 3d. OU/PSNU Achievement
 
 ```{r}
-achievement_3d <- check %>% filter(fy == 2022, disagg == "KP", country == "Botswana", indicator %in% indicators_3a) %>%
+achievement_3d <- check %>% filter(fy == 2023, disagg == "KP", country == "South Africa", indicator %in% indicators_3a) %>%
 group_by(fy, indicator, funding_agency, psnu) %>%
 summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = 'drop') %>%
   mutate(ach = sum.cum/sum.targets)

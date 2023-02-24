@@ -9,12 +9,12 @@ Identify the name of the latest PSNU x IM MER Structured Data Set
 
 ```{r}
 
-file <- glamr::return_latest("../Data/", "PSNU_IM_FY20") %>% print()
+file <- glamr::return_latest("../Data/", "PSNU_IM_FY21") %>% print()
 
 ```
 
 Read MSD
 
 ```{r}
-mer_df <- gophr::read_psd(file, save_rds = TRUE, remove_txt = FALSE)
+mer_df <- gophr::read_msd(file, save_rds = TRUE, remove_txt = FALSE)
 ```

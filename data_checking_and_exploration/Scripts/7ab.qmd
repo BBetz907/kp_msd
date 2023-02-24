@@ -9,10 +9,10 @@ editor: visual
 ```{r}
 mmd %>%
   filter(str_detect(indicator, "TX_CURR_ARV"),
-         country== "Cote d'Ivoire",
+         country == "Burkina Faso",
          disaggregate == "Total Numerator",
          funding_agency == "USAID",
-         fy == 2022) %>%
+         fy == 2023) %>%
   select(country, indicator, cumulative) %>%
   group_by(country, indicator) %>%
   summarise(results = sum(cumulative)) %>%
@@ -20,10 +20,10 @@ mmd %>%
 
 mmd %>%
   filter(str_detect(indicator, "TX_CURR_ARV"),
-         country %in% c("Burma","Burkina Faso"),
+         country %in% c("Honduras","South Sudan"),
          disaggregate == "Total Numerator",
          funding_agency == "USAID",
-         fy == 2022) %>%
+         fy == 2023) %>%
   select(country, indicator, mech_name, cumulative) %>%
   group_by(country, indicator, mech_name) %>%
   summarise(results = sum(cumulative)) %>%
