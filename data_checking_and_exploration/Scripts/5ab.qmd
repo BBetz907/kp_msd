@@ -1,0 +1,142 @@
+---
+title: "data_checking_vl"
+format: html
+editor: visual
+---
+
+5a-b
+
+```{r}
+measure_trends_country_sa <- check %>% filter(
+  country %in% c("Lesotho", "Eswatini", "South Africa"),
+  disagg == "KP", 
+  fy == 2022,
+  indicator %in% vl_indicators) %>%
+  group_by(country, indicator, funding_agency) %>%
+  summarise(sum.results=sum(cumulative)) %>% print()
+
+measure_trends_country_plus <- measure_trends_country_sa %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D
+         # ,
+         # vlc = TX_PVLS_D/TX_CURR_Lag2
+         ) %>% print()
+
+
+measure_trends_country_plus %>% filter(country=="Lesotho") %>% print() %>%
+  ggplot2::ggplot(aes(x=vlc, y=vls, fill=funding_agency)) + geom_label(aes(label = scales::percent(vlc, accuracy = 1) )) + ylim(.8,1) + xlim(.8,1)
+
+measure_trends_country_plus %>% filter(country=="Eswatini") %>% print() %>%
+  ggplot2::ggplot(aes(x=vlc, y=vls, fill=funding_agency)) + geom_label(aes(label = scales::percent(vls, accuracy = 1) )) 
+# + ylim(.8,1) + xlim(.8,1)
+
+measure_trends_country_plus %>% filter(country=="South Africa") %>% print() %>%
+  ggplot2::ggplot(aes(x=vlc, y=vls, fill=funding_agency)) + geom_label(aes(label = scales::percent(vls, accuracy = 1) )) 
+
+
+measure_trends_country_rsa <- check %>% 
+  filter(
+  country == "South Africa",
+  disagg == "KP", 
+  # funding_agency == "CDC",
+  # partner == "TB HIV CARE ASSOCIATION",
+  mech_name == "THCA (GH002189)",
+  snu1 %in% c("mp Mpumalanga Province", "kz KwaZulu-Natal Province"),
+  fy == 2022,
+  # fyq == "FY22 Q4",
+  indicator %in% vl_indicators) %>%
+  dplyr::group_by(indicator, psnu) %>%
+  dplyr::summarise(sum.results=sum(cumulative))
+
+measure_trends_country_plus_rsa <- measure_trends_country_rsa %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D
+         # ,
+         # vlc = TX_PVLS_D/TX_CURR_Lag2
+         )
+
+measure_trends_country_plus_rsa %>% print() 
+# %>%
+#   ggplot2::ggplot(aes(x=vlc, y=vls, fill=psnu)) + geom_label(aes(label = scales::percent(vls, accuracy = 1) )) 
+
+```
+
+5b deep dive
+
+```{r}
+measure_trends_country_rsa <- mer_df %>% 
+  filter(
+  country == "South Africa",
+  str_detect(disaggregate, "Key"), 
+  # funding_agency == "CDC",
+  # partner == "TB HIV CARE ASSOCIATION",
+  mech_name == "THCA (GH002189)",
+  snu1 %in% c("mp Mpumalanga Province", "kz KwaZulu-Natal Province"),
+  fiscal_year == 2022,
+  # fyq == "FY22 Q4",
+  indicator == "TX_PVLS") %>%
+  dplyr::group_by(indicator, psnu, numeratordenom) %>%
+  dplyr::summarise(sum.results=sum(cumulative))
+
+measure_trends_country_plus_rsa <- measure_trends_country_rsa %>% 
+  mutate(indicator = str_c(indicator, numeratordenom, sep = "_")) %>% 
+  select(-numeratordenom) %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D)
+
+measure_trends_country_plus_rsa %>% print()
+```
+
+5c,d - Data prep: GP-KP
+
+```{r}
+vl_indicators <- c("TX_CURR_Lag2", "TX_PVLS_D", "TX_PVLS_N")
+nonreporters <- c("Ghana", "Liberia", "PNG", "Indonesia", "Vietnam", "Angola")
+`%nin%`  <- Negate(`%in%`)
+
+vl_gp_kp <- check %>%
+  filter(fy == 2022 ,
+         country %nin% nonreporters,
+         indicator %in% vl_indicators) %>% 
+  group_by(country, snu1, disagg, indicator) %>%
+  summarise(results = sum(cumulative), .groups = "drop") %>%
+  mutate(indicator = as.character(indicator)) 
+
+vl_kp <- vl_gp_kp %>% filter(disagg == "KP")
+  
+
+vl_gp <- vl_gp_kp %>% 
+  mutate(results = if_else(disagg ==  "KP", -results, results)) %>%
+  group_by(country, snu1, indicator) %>%
+  summarise(results = sum(results), .groups = "drop") %>%
+  mutate(disagg = "GP") %>% 
+  select(country, snu1, disagg, indicator, results)
+
+
+vl_gp_kp2 <- bind_rows(vl_gp, vl_kp) %>% 
+  pivot_wider(values_from = results, names_from = indicator) %>%
+  mutate(vlc = TX_PVLS_D/TX_CURR_Lag2,
+         vls = TX_PVLS_N/TX_PVLS_D,
+         country = fct_reorder(country, desc(country))) %>% print()
+```
+
+VLC GP-KP Lesotho
+
+```{r}
+
+vl_gp_kp2 %>% filter(country == "Lesotho") %>%
+  ggplot(aes(y = snu1, x = vlc, color = disagg)) + geom_text(aes(label=scales::percent(vlc, accuracy = 1))) + scale_color_manual(values = c(KP = siei_blue, GP = grey60k)) 
+
+vl_gp_kp2 %>% filter(country == "Lesotho") %>%
+  ggplot(aes(y = snu1, x = vls, color = disagg)) + geom_text(aes(label=scales::percent(vls, accuracy = 1))) + scale_color_manual(values = c(KP = siei_blue, GP = grey60k)) 
+```
+
+```{r}
+
+```
+
+VLS GP-KP
+
+```{r}
+vl_gp_kp2 %>% ggplot(aes(y = country, x = vls, color = disagg)) + geom_text(aes(label=scales::percent(vls, accuracy = 1))) + scale_color_manual(values = c(KP = siei_blue, GP = grey60k)) 
+```

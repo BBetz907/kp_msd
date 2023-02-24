@@ -1,0 +1,37 @@
+---
+title: "data_checking_vl"
+format: html
+editor: visual
+---
+
+#6a
+
+```{r}
+kp_tx_disagg_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR")
+
+check %>% filter(
+  country %in% c("Burma", "Mozambique"),
+  disagg == "KP", 
+  fy == 2022,
+  funding_agency == "USAID",
+  indicator %in% kp_tx_disagg_indicators) %>%
+  group_by(country, indicator, psnu) %>%
+  summarise(sum.results=sum(cumulative)) %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  print()
+```
+
+6b - TX_ML
+
+```{r}
+check %>% filter(
+  country %in% c("Democratic Republic of the Congo"),
+  disagg == "KP", 
+  fy == 2022,
+  funding_agency == "USAID",
+  indicator == "TX_ML") %>%
+  group_by(country, keypop, tx_ml_reason) %>%
+  summarise(sum.results=sum(cumulative)) %>% 
+  pivot_wider(values_from = sum.results, names_from = tx_ml_reason) %>%
+  print()
+```
