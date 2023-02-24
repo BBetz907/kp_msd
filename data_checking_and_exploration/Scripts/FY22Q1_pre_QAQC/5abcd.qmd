@@ -138,6 +138,8 @@ vl_by_kp_country %>%
 
 5c,d - Data prep: GP-KP
 
+[VLC](https://tableau.usaid.gov/views/KeyPopulationsDashboard/5_cVLCKP-GP/74c36036-3039-47f1-a215-867ba58308e4/8a6bc501-922c-4002-a454-d63c3fec56d2?:display_count=n&:showVizHome=n&:origin=viz_share_link), [VLS](https://tableau.usaid.gov/views/KeyPopulationsDashboard/5_dVLSKP-GP?:showAppBanner=false&:display_count=n&:showVizHome=n&:origin=viz_share_link) country5
+
 ```{r}
 
 
@@ -185,10 +187,4 @@ vl_gp_kp2 %>% filter(country == country5) %>%
       "{country5} VLS comparison between KP and GP by SNU, {current_fy}"
     )
       )
-```
-
-VLS GP-KP
-
-```{r}
-vl_gp_kp2 %>% ggplot(aes(y = country, x = vls, color = disagg)) + geom_text(aes(label=scales::percent(vls, accuracy = 1))) + scale_color_manual(values = c(KP = siei_blue, GP = grey60k)) 
 ```
