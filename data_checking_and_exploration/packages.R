@@ -6,4 +6,4 @@ library(ggrepel)
 library(scales)
 library(tidyverse)
 library(gagglr)
-
+library(glue)

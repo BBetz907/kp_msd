@@ -4,35 +4,7 @@ format: html
 editor: visual
 ---
 
-2d/e
 
-```{r}
-# 1d ----------------------------------------------------------------------
-measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
-
-measure_trends_country <- qcheck %>% filter(
-  country == "Nigeria", disagg == "KP", 
-  funding_agency == "USAID",
-  psnu %in% c("Cross River", "Niger", "Akwa Ibom"),
-  results!=0, indicator %in% measure_indicators) %>%
-  group_by(fyq, country, indicator, psnu) %>%
-  summarise(sum.results=sum(results)) %>%
-  pivot_wider(values_from = sum.results, names_from = indicator) %>%
-  mutate(vls = TX_PVLS_N/TX_PVLS_D,
-         vlc = TX_PVLS_D/TX_CURR_Lag2,
-         linkage = TX_NEW/HTS_TST_POS) %>% print()
-
-#note: no dedup data here, but some dedup data in dashboard
-
-
-measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, y = vls, group=psnu)) +
-  geom_line(aes(color = psnu)) +
-  geom_label(aes(label = percent(vls, accuracy = 1))) + ylim(0,1.2)
-
-measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, group=psnu)) +
-  geom_col(aes(y = TX_PVLS_D), fill = usaid_blue) +
-  geom_col(aes(y = TX_PVLS_N), fill = grey50k, width = 0.5) + facet_wrap(~psnu)
-```
 
 Data prep: GP-KP
 
