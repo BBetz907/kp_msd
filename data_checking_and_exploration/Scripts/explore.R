@@ -1,12 +1,3 @@
-library(scales)
-library(gridExtra)
-library(grid)
-library(glitr)
-library(ggplot2)
-library(stats)
-library(ggrepel)
-library(scales)
-
 
 
 pos <-  c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
