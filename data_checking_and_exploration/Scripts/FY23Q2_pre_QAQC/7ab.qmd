@@ -13,8 +13,7 @@ mmd %>%
          disaggregate == "Total Numerator",
          funding_agency == "USAID",
          fy == 2023) %>%
-  select(country, indicator, cumulative) %>%
-  group_by(country, indicator) %>%
+  group_by(country, indicator, mech_code) %>%
   summarise(results = sum(cumulative)) %>%
   print()
 
@@ -24,7 +23,6 @@ mmd %>%
          disaggregate == "Total Numerator",
          funding_agency == "USAID",
          fy == 2023) %>%
-  select(country, indicator, mech_name, cumulative) %>%
   group_by(country, indicator, mech_name) %>%
   summarise(results = sum(cumulative)) %>%
   pivot_wider(names_from = indicator, values_from = results) %>%
