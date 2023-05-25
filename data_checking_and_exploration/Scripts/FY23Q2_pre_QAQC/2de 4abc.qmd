@@ -1,0 +1,158 @@
+---
+title: "7ab"
+format: html
+editor: visual
+---
+
+```{r}
+country3 <- "Ethiopia"
+country4 <- "Vietnam"
+country5 <- "Uganda"
+
+```
+
+## 2de
+
+2d HTS [Index, SNS: PEPFAR in country3](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_dPositivityTrends/80ee2627-5bd1-4aa3-842c-f07bc27c8baa/35dfff48-aeec-40c8-aa03-d4c58c7c0c00?:display_count=n&:showVizHome=n&:origin=viz_share_link) + [2e](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_ePositivityHTSVolTrendContributiuon/539d7ba9-25ca-4002-8508-c8abe9517b7f/0844c1d6-242a-499f-ae2c-0abdde58ada7?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+2de HTS [by agency, country 4](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_dPositivityTrends/9d44b010-ebe5-4a60-99c9-36391ac5106c/a0e88fdf-faac-4bd6-b42d-2c645c28016c?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+2de HTS [by KeyPop in country5](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_dPositivityTrends/33d4c902-23c5-4d98-b84f-9d256f0740a4/2780431a-34fc-460b-8257-6cbf6668b962?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+
+modality %>%
+  filter(country== country3,indicator %in% c("HTS_TST_POS", "HTS_TST"),
+         str_detect(modality,"Index|SNS"), 
+         fy==2023) %>%
+  select(country, indicator, modality, fyq, results) %>%
+  group_by(country, indicator, modality, fyq) %>% 
+  summarise(results = sum(results), .groups = 'drop') %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country4,
+        disagg == "KP",
+         fy==2023) %>%
+  select(country, indicator, funding_agency, fyq, results) %>%
+  group_by(country, indicator, funding_agency, fyq) %>% 
+  summarise(results = sum(results), .groups = 'drop') %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country5,
+         fy==2023) %>%
+  select(country, indicator, keypop, fyq, results) %>%
+  group_by(country, indicator, keypop, fyq) %>% 
+  summarise(results = sum(results), .groups = 'drop') %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+```
+
+4a-c
+
+4abc [country 4 by modality](https://tableau.usaid.gov/views/KeyPopulationsDashboard/4_bPositivityBarChartComparisons/4ae86c0e-d420-4931-a552-fd225911a4af/7d584d07-6605-4dce-8a5c-584d04ead6a3?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+4bc [country 5 by agency](https://tableau.usaid.gov/views/KeyPopulationsDashboard/4_bPositivityBarChartComparisons/f0920949-09d0-4894-abfd-4ae9869abca5/0271bbcf-2a30-434b-8491-30044e1ddd40?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+4abc [country3 by KP](https://tableau.usaid.gov/views/KeyPopulationsDashboard/4_bPositivityBarChartComparisons/fdbcacac-48f4-4771-a72f-77d299de0f97/04b66836-3e1c-4110-86e5-d85d95776fc6?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+4bc [country4 by SNU](https://tableau.usaid.gov/views/KeyPopulationsDashboard/4_bPositivityBarChartComparisons/a0fdd21b-8022-4810-801e-0045f9bdb448/5351f49d-d270-4142-92a5-15bdc349c2cf?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+4bc [country5 by PSNU](https://tableau.usaid.gov/views/KeyPopulationsDashboard/4_cPositivityScatterPlotComparisons/9195e614-e628-4685-81fa-89ecc4996bd2/dd047c24-bdff-405f-94a2-aaf23551b9fd?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+#| echo: false
+current_fy <- 2023
+current_fyq <- "FY23 Q2"
+
+modality %>%
+  filter(country== country4,
+        fy == current_fy       ,
+         indicator %in% c("HTS_TST_POS", "HTS_TST"),
+     ) %>%
+  select(country, indicator, modality, results) %>%
+  group_by(country, indicator, modality) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country5,
+        fy == current_fy  ,     
+        disagg == "KP") %>%
+  select(country, indicator, funding_agency, results) %>%
+  group_by(country, indicator, funding_agency) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country3,
+        fy == current_fy       
+     ) %>%
+  select(country, indicator, keypop, results) %>%
+  group_by(country, indicator, keypop) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country4,
+        fy == current_fy ,      
+        disagg == "KP") %>%
+  select(country, indicator, snu1, results) %>%
+  group_by(country, indicator, snu1) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country4,
+        fy == current_fy,      
+        disagg == "KP") %>%
+  group_by(country, indicator, keypop, fyq) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country5,
+        fy == current_fy      , 
+        disagg == "KP") %>%
+  select(country, indicator, psnu, results) %>%
+  group_by(country, indicator, psnu) %>% 
+  summarise(results = sum(results), .groups = "drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+```
