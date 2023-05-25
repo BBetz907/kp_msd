@@ -1,0 +1,142 @@
+---
+title: "data_checking_vl"
+format: pdf
+editor: visual
+---
+
+1a, [kenya PrEP_NEW](https://tableau.usaid.gov/views/KeyPopulationsDashboard/1_aIndicatorComparisons/08d84df1-a71e-4280-a47a-a2ed381c1a4e/72b1a2f7-70a6-4c68-bbb1-128feea308ef?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+check %>% filter(
+                             country == "Kenya", 
+                             disagg == "KP", fy == 2023) %>%
+  group_by(keypop, indicator) %>%
+  summarise(sum.cum=sum(cumulative), sum.targets=sum(targets), .groups = "drop") %>%
+  mutate(ach = sum.cum/sum.targets) %>% glimpse() %>%
+  filter(sum.cum!=0, indicator=="PrEP_NEW") %>%
+  ggplot2::ggplot(aes(x = " ", y = sum.cum, fill=keypop)) + geom_col() + 
+  facet_grid(~ keypop) + 
+  geom_text(color = grey90k, position = position_nudge(y=200), aes(label = percent(ach, accuracy = 1))) +
+  geom_text(color = grey10k, position = position_stack(vjust = 0.6), aes(label = sum.cum)) + 
+  si_style_nolines() +   theme(legend.position = "none") + xlab("") +
+  scale_fill_manual(values = c(FSW = "#005e7a", MSM = "#f28965", TG = "#990d2e", Prisoners = "#fbcc50", PWID = "#7ecfc0"))
+
+```
+
+1a, [global KP by agency](https://tableau.usaid.gov/views/KeyPopulationsDashboard/1_aIndicatorComparisons/c941c5c6-5e0b-4b66-90f6-24f341b2352a/78a691ce-33cd-4299-a406-b3af07a8e5b3?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+check %>% filter(funding_agency %in% c("USAID", "CDC", "Dedup"),
+                             disagg == "KP", fy == 2023) %>%
+  group_by(funding_agency, indicator) %>%
+  summarise(sum.cum=sum(cumulative), sum.targets=sum(targets)) %>%
+  mutate(ach = sum.cum/sum.targets) %>% 
+  filter(sum.cum!=0, indicator %in% c("PrEP_NEW", "HTS_TST_POS", "TX_CURR")) %>%
+  ggplot2::ggplot(aes(x = funding_agency, y = sum.cum, fill = funding_agency)) + geom_col() +
+  facet_grid(~ indicator) + 
+  geom_text(color = grey90k, position = position_nudge(y=20000), aes(label = percent(ach, accuracy = 1))) +
+  geom_text(position = position_stack(vjust = 0.6), color = grey10k, 
+            size = 3, aes(label = scales::comma(sum.cum))) +
+  si_style_nolines() +   scale_fill_manual(values = c(USAID = "#002f6c", CDC = "#a7c6ed", 'State Dept.' = "#651d32", Dedup = "#6ca18f", DOD = "#ba0c2f")) + theme(legend.position = "bottom", axis.title.x = element_blank())
+```
+
+1d - [Malawi Linkage by partner, among KP](https://tableau.usaid.gov/views/KeyPopulationsDashboard/1_dMeasureTrends/bb95f33c-cc70-4c3e-a524-0fc042b8d499/0ba5db7f-17a8-4988-a7be-14ee07cd61be?:showAppBanner=false&:origin=viz_share_link&:display_count=n&:showVizHome=n)
+
+```{r}
+measure_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag1", "TX_CURR_Lag2", "HTS_TST_POS", "TX_NEW", "HTS_TST_NEG", "PrEP_NEW")
+
+measure_trends_country <- qcheck %>% 
+  filter(country == "Malawi", disagg == "KP", 
+  partner %in% c("CEDEP", "Family Health International", "PAKACHERE INSTITUTE OF HEALTH AND DEVELOPMENT COMMUNICATION"),
+  funding_agency == "USAID",
+  results!=0, indicator %in% measure_indicators) %>%
+  group_by(fyq, country, indicator, partner) %>%
+  summarise(sum.results=sum(results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+                  # vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% print()
+
+#note: no dedup data here, but some dedup data in dashboard
+
+
+measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, y = linkage, group=partner)) +
+  geom_line(aes(color = partner)) +
+  geom_text(aes(label = percent(linkage, accuracy = 1))) + ylim(0,1.5) +
+  theme(legend.position = "bottom") + si_style_nolines()
+
+measure_trends_country %>% ggplot2::ggplot(aes(x = fyq, group=partner)) +
+  geom_col(aes(y = HTS_TST_POS), fill = usaid_blue) +
+  geom_col(aes(y = TX_NEW), fill = grey50k, width = 0.5) + facet_wrap(~partner) + si_style_nolines()
+```
+
+1d - [DRC vls by agency](https://tableau.usaid.gov/views/KeyPopulationsDashboard/1_dMeasureTrends/0f0c08b9-6a26-4583-9d13-611575f3cee0/605ddc13-b4b8-4b0e-b6ea-fd33dd933de0?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+
+
+measure_trends_country2 <- qcheck %>% filter(
+  country == "Democratic Republic of the Congo", disagg == "KP", 
+  results!=0, indicator %in% measure_indicators) %>%
+  group_by(fyq, country, indicator, keypop) %>%
+  summarise(sum.results=sum(results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>% 
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         # vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS) %>% print()
+
+#note: no dedup data here, but some dedup data in dashboard
+
+
+measure_trends_country2 %>% ggplot2::ggplot(aes(x = fyq, y = vls, group=keypop)) +
+  geom_line(aes(color = keypop)) +
+  geom_label(aes(label = percent(vls, accuracy = 1))) + ylim(0,1.2)
+
+measure_trends_country2 %>% ggplot2::ggplot(aes(x = fyq, group=keypop)) +
+  geom_col(aes(y = TX_PVLS_D), fill = usaid_blue) +
+  geom_col(aes(y = TX_PVLS_N), fill = grey50k, width = 0.5) + facet_wrap(~keypop, nrow = 1) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+1e - [linkage](https://tableau.usaid.gov/views/KeyPopulationsDashboard/1_eMeasureComparisons/9385cc7d-5000-4486-993c-5a08ba2bc2c1/109e519a-e490-4a1d-94d8-6cb56b622c28?:display_count=n&:showVizHome=n&:origin=viz_share_link), [vls](https://tableau.usaid.gov/views/KeyPopulationsDashboard/1_eMeasureComparisons/ec71dd0f-a6d2-4af6-b02b-69806b5f9b46/db2c85c0-a4e7-4bb5-a1df-6b3546d5d236?:display_count=n&:showVizHome=n&:origin=viz_share_link) by country
+
+```{r}
+
+
+measure_trends_by_country <- qcheck %>% filter(
+  disagg == "KP", 
+  fy == 2023,
+  # funding_agency == "USAID",
+  results!=0, indicator %in% measure_indicators) %>%
+  group_by(fyq, country, indicator) %>%
+  summarise(sum.results=sum(results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vls_axis = if_else(vls > 1.05, 1.05, vls),
+         #vlc = TX_PVLS_D/TX_CURR_Lag2,
+         linkage = TX_NEW/HTS_TST_POS,
+         linkage_axis = if_else(linkage > 1.05, 1.05, linkage)) %>% 
+  print()
+
+measure_trends_by_country %>% 
+    mutate(country = fct_reorder(country, (linkage)))  %>%
+    arrange(desc(linkage)) %>%
+  slice(1:5, 15:20) %>%
+  ggplot(aes(y=country, x=linkage_axis)) +  xlab("Proxy Linkage") + geom_col() + xlim(0,1.2) + 
+  geom_text(aes(label = scales::percent(linkage, accuracy = 1)), position = position_nudge(x=0.06)) + si_style_xyline()  + scale_x_continuous(labels = percent)
+
+
+measure_trends_by_country %>% 
+    mutate(country = fct_reorder(country, (vls)))  %>%
+      arrange(vls) %>%
+    slice(11:20) %>%
+  ggplot(aes(y=country, x=vls_axis)) + geom_col() + xlim(0,1.2) + 
+  geom_text(aes(label = scales::percent(vls, accuracy = 1)), position = position_nudge(x=0.06)) + si_style_xyline() +
+  xlab("VL Suppression") + scale_x_continuous(labels = percent) 
+# + 
+#   scale_fill_manual(
+#     colours = c("red", "yellow", "green", "yellow", "red"),
+#     breaks = c(.5, .75, .85, .95)
+#   )
+
+```

@@ -1,0 +1,51 @@
+---
+title: "data_checking_vl"
+format: html
+editor: visual
+---
+
+#6a
+
+[top 3 countries](https://tableau.usaid.gov/views/KeyPopulationsDashboard/6_aKPTXdisaggreporting?:showAppBanner=false&:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+kp_tx_disagg_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR")
+
+top4 <- c("Nigeria", "Vietnam", "Ukraine", "Mozambique")
+
+check %>% filter(
+  country %in% top4,
+  disagg == "KP", 
+  fy == current_fy,
+  indicator %in% kp_tx_disagg_indicators) %>%
+  group_by(country, indicator) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  print()
+```
+
+6b - [TX_ML - usaid](https://tableau.usaid.gov/views/KeyPopulationsDashboard/6_bKPTX_ML/a3af8b22-db55-446a-aa16-a94b51cc9e18/90c15629-ec9e-4370-b271-f788df6f3d9c?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+check %>% filter(
+  country %in% c("Ethiopia", "Democratic Republic of the Congo"),
+  disagg == "KP", 
+  fy == current_fy,
+  indicator == "TX_ML") %>%
+  group_by(country, keypop, tx_ml_reason) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% 
+  pivot_wider(values_from = sum.results, names_from = tx_ml_reason) %>%
+  print()
+ 
+  
+#how to calculate percent of total? question for another round
+
+
+ check %>% filter(
+  country %in% c("Ethiopia", "Democratic Republic of the Congo"),
+  disagg == "KP", 
+  fy == current_fy,
+  indicator == "TX_ML") %>%  group_by(country, keypop) %>%
+  summarise(sum.results=sum(cumulative),  .groups = "drop") %>% 
+  print()
+```

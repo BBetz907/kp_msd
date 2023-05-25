@@ -1,0 +1,123 @@
+---
+title: "snapshot_and_cascades"
+author: "bourke betz"
+format: html
+    page-layout: full
+    body-width: 900px
+editor: visual
+---
+
+```{r}
+
+```
+
+```{r}
+pos <-  c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
+neg <-  c("KP_PREV", "HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT", "PrEP_CURR")
+# mal_im <- c("81764","81759")
+
+
+
+```
+
+```{r}
+
+cascade <- check %>% filter(country == "Malawi", 
+                            funding_agency == "USAID",
+                            # mech_code %in% mal_im,
+                            fy >= max(fy) - 1,
+                            disagg == "KP", 
+                            indicator %in% neg) %>%
+  group_by(fy, indicator, disagg, funding_agency, country) %>%
+  summarise(sum.cum=sum(cumulative), sum.targ=sum(targets), .groups = "drop") 
+
+cascade %>% 
+  ggplot2::ggplot(aes(x = indicator)) + 
+    geom_col(aes(y = sum.cum, fill = factor(fy))) + 
+    geom_col(aes(y=sum.targ), fill = "gray", alpha = 0.4, width =0.5) +
+    geom_text(color = "black", position = position_stack(vjust = 0.9), aes(y=sum.cum, label = sum.cum)) + 
+
+  facet_wrap(~ fy) + 
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = glue::glue("{cascade$funding_agency} {cascade$country} {cascade$disagg} prevention cascade by FY"),
+       y="cumulative")
+
+
+```
+
+```{r}
+#positive cascade
+cascade <- check %>% filter(country == "Thailand", disagg == "KP",
+                            indicator %in% pos, 
+                            # str_detect(mech_name, "EpiC"),
+                            fy >= max(fy) - 1,
+                            ) %>%
+  group_by(fy, indicator, country, disagg) %>%
+  summarise(sum.cum=sum(cumulative), .groups = "drop") 
+
+cascade %>%
+  ggplot2::ggplot(aes(x = indicator, y = sum.cum, fill = factor(fy))) + 
+  geom_col() + 
+  geom_text(color = "white", position = position_stack(vjust = 0.9), aes(label = sum.cum)) + 
+  facet_wrap(~ fy) + 
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(
+  title = glue::glue("{cascade$country} {cascade$disagg} treatment cascade by FY"),
+  y="cumulative")
+
+```
+
+```{r}
+
+compare_pos_cascade <- check %>%
+  filter(country=="Zimbabwe",                            
+         indicator %in% pos, 
+         fy == max(fy),
+         funding_agency!="Dedup",
+         disagg == "KP",) %>%
+  group_by(indicator, funding_agency, country, fy, ) %>%
+  summarise(sum.cum = sum(cumulative),
+            sum.targ = sum(targets),
+            ach = sum(cumulative)/sum(targets),
+            .groups = "drop") 
+
+compare_pos_cascade %>% 
+  ggplot(aes(x=indicator)) + 
+  geom_col(aes(y=sum.cum, fill = funding_agency)) +
+  geom_text(aes(y=sum.targ+2000, label=scales::percent(ach, 1)), color = "red") +
+  geom_text(aes(y=0.9*(sum.cum), label=sum.cum), color = "black") +
+  facet_grid(cols=vars(funding_agency)) +
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) + 
+    labs(title = glue::glue("{compare_pos_cascade$funding_agency}  {compare_pos_cascade$country} treatment cascade by funding agency, {compare_pos_cascade$fy}"), y="cumulative")
+```
+
+```{r}
+compare_cascade_by_b <- check %>%
+  filter(country=="Mozambique",                            
+         indicator %in% neg, 
+         fy == max(fy),
+         funding_agency=="USAID",
+         snu1 %in% c("Maputo","Sofala", "Tete", "Manica"),
+         disagg == "KP",) %>%
+  group_by(indicator, snu1, fy, country, funding_agency) %>%
+  summarise(sum.cum = sum(cumulative),
+            sum.targ = sum(targets),
+            ach = sum(cumulative)/sum(targets),
+            .groups = "drop")
+  
+compare_cascade_by_b %>% ggplot(aes(x=indicator)) +
+  geom_col(aes(y=sum.cum)) +
+  geom_text(aes(y=sum.targ+2000, label=scales::percent(ach, 1)), color = "red") +
+  geom_text(aes(y=0.9*(sum.cum), label=sum.cum), color = "white") +
+  facet_wrap(facets = vars(snu1), nrow=1) +
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = glue::glue("{compare_cascade_by_snu$funding_agency}  {compare_cascade_by_snu$country} prevention cascade by select snus, {compare_cascade_by_snu$fy}"),y="cumulative")
+```
