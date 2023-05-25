@@ -9,11 +9,16 @@ Identify the name of the latest PSNU x IM MER Structured Data Set
 
 ```{r}
 
+<<<<<<< HEAD:data_checking_and_exploration/Scripts/FY23Q2_pre_QAQC/read_msd.qmd
 file <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU" ) %>% print()
+=======
+file <- glamr::return_latest("../Data/", "PSNU_IM_FY21") %>% print()
+
+>>>>>>> 23q1_arunmozhi:data_checking_and_exploration/Scripts/read_msd.qmd
 ```
 
 Read MSD
 
 ```{r}
-mer_df <- gophr::read_psd(file, save_rds = TRUE, remove_txt = FALSE)
+mer_df <- gophr::read_msd(file, save_rds = TRUE, remove_txt = FALSE)
 ```
