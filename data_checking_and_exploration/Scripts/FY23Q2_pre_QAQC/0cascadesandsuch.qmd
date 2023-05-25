@@ -121,3 +121,5 @@ compare_cascade_by_b %>% ggplot(aes(x=indicator)) +
         axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(title = glue::glue("{compare_cascade_by_snu$funding_agency}  {compare_cascade_by_snu$country} prevention cascade by select snus, {compare_cascade_by_snu$fy}"),y="cumulative")
 ```
+
+custom indicator cascades were checked against MER data manually, and custom indicators assessed for reasonability. One filter was revised as it needed to be updated to remove duplication.

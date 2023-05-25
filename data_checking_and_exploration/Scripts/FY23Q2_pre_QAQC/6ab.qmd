@@ -28,7 +28,7 @@ check %>% filter(
 
 ```{r}
 check %>% filter(
-  country %in% c("Ethiopia", "Democratic Republic of the Congo"),
+  country %in% c("Ethiopia"),
   disagg == "KP", 
   fy == current_fy,
   indicator == "TX_ML") %>%
@@ -37,15 +37,29 @@ check %>% filter(
   pivot_wider(values_from = sum.results, names_from = tx_ml_reason) %>%
   print()
  
-  
+
+ 
 #how to calculate percent of total? question for another round
 
 
  check %>% filter(
-  country %in% c("Ethiopia", "Democratic Republic of the Congo"),
+  country == "Ethiopia",
   disagg == "KP", 
   fy == current_fy,
   indicator == "TX_ML") %>%  group_by(country, keypop) %>%
-  summarise(sum.results=sum(cumulative),  .groups = "drop") %>% 
+  summarise(sum.results=sum(cumulative),
+            .groups = "drop") %>% 
+ mutate(percent_results = scales::percent((sum.results / sum(sum.results)))) %>%
+  print()
+ 
+  check %>% filter(
+  country == "Ethiopia",
+  disagg == "KP", 
+  fy == current_fy,
+  keypop=="FSW",
+  indicator == "TX_ML") %>%  group_by(country, tx_ml_reason) %>%
+  summarise(sum.results=sum(cumulative),
+            .groups = "drop") %>% 
+ mutate(percent_results = scales::percent(sum.results / sum(sum.results))) %>%
   print()
 ```

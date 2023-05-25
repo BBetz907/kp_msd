@@ -4,6 +4,17 @@ format: html
 editor: visual
 ---
 
+5ab test
+
+```{r}
+vl <- check %>% filter(country == "Tanzania", disagg == "KP", str_detect(indicator, "PVLS"), fy == 2023) %>%
+  group_by(country, disagg, keypop, indicator) %>%
+  summarise(sum.cum=sum(cumulative), .groups = "drop") %>%
+  pivot_wider(names_from = indicator, values_from = sum.cum) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D) %>%
+  print() 
+```
+
 set parameters, prepare data
 
 ```{r}
@@ -22,8 +33,9 @@ lagged_vl <- check %>% filter(indicator %in% vl_indicators) %>%
           country %in% southern_africa,
           disagg == "KP" ) %>%
   group_by(country, indicator, funding_agency, keypop) %>%
-  summarise(sum.results=sum(cumulative), .groups = "drop") 
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% print()
 
+lagged_vl %>% count(indicator)
 
 ```
 
@@ -43,29 +55,26 @@ Preparation for 5B
 
 vl by KP and country
 
-```{r}
-vl_by_kp_country <- lagged_vl %>%
-  select(-funding_agency) %>%
-  group_by(country, indicator, keypop) %>%
-  summarise(sum.results=sum(sum.results), .groups = "drop") %>% 
-  pivot_wider(values_from = sum.results, names_from = indicator) %>%
-  mutate(vls = TX_PVLS_N/TX_PVLS_D,
-         vlc = TX_PVLS_D/TX_CURR_Lag2
-         )
-
-
-```
-
-vl by agency and country
+currently need lagged vars
 
 ```{r}
-vl_by_agency_country <- lagged_vl %>%
-  group_by(country, indicator, funding_agency) %>%
-  summarise(sum.results=sum(sum.results), .groups = "drop") %>% 
-  pivot_wider(values_from = sum.results, names_from = indicator) %>%
-  mutate(vls = TX_PVLS_N/TX_PVLS_D,
-         vlc = TX_PVLS_D/TX_CURR_Lag2
-         )
+# vl_by_kp_country <- lagged_vl %>%
+#   select(-funding_agency) %>%
+#   group_by(country, indicator, keypop) %>%
+#   summarise(sum.results=sum(sum.results), .groups = "drop") %>% 
+#   pivot_wider(values_from = sum.results, names_from = indicator) %>%
+#   mutate(vls = TX_PVLS_N/TX_PVLS_D,
+#          vlc = TX_PVLS_D/TX_CURR_Lag2
+#          )
+
+# vl_by_agency_country2 <- lagged_vl %>%
+#   group_by(country, indicator, funding_agency) %>%
+#   summarise(sum.results=sum(sum.results), .groups = "drop") %>% 
+#   pivot_wider(values_from = sum.results, names_from = indicator) %>%
+#   mutate(vls = TX_PVLS_N/TX_PVLS_D,
+#          vlc = TX_PVLS_D/TX_CURR_Lag2
+#          )
+
 ```
 
 5b
@@ -78,60 +87,60 @@ among KP, by country
 
 ```{r}
 
-
-vl_by_agency_country %>% filter(country==southern_africa[1]) %>% 
-  ggplot2::ggplot(aes(x=vlc, y=vls, color=funding_agency)) + 
-  geom_point(size=3.5) +
-  geom_text(aes(label = str_c(scales::percent(vlc, accuracy = 1))), 
-            nudge_y = .02) + 
-  geom_text(aes(label = str_c(scales::percent(vls, accuracy = 1))), 
-            nudge_y = -.02) + 
-  ylim(.8,1.2) + xlim(.8,1.2) + 
-  si_style_xyline() + 
-  theme(legend.position = "bottom", axis.title.x = element_blank()) + 
-  scale_color_manual(values = c(
-                         USAID = "#002f6c", CDC = "#a7c6ed", 
-                        'State Dept.' = "#651d32", Dedup = "#6ca18f", 
-                        DOD = "#ba0c2f")) + 
-  labs(title = glue(
-    "{current_fyq} {southern_africa[1]}, VLC (top label) and VLS (bottom) by agency among KP"
-    )) 
-
-vl_by_kp_country %>% filter(country==southern_africa[2]) %>% 
-  ggplot2::ggplot(aes(x=vlc, y=vls, color=keypop)) +   geom_point(size=3.5) +
-  geom_text(aes(label = str_c(scales::percent(vlc, accuracy = 1))), 
-            nudge_y = .005) + 
-  geom_text(aes(label = str_c(scales::percent(vls, accuracy = 1))), 
-            nudge_y = -.005) + 
-  si_style_xyline() + 
-  theme(legend.position = "bottom", axis.title.x = element_blank()) + 
-  scale_color_manual(values = c(FSW = "#005e7a", MSM = "#f28965", TG = "#990d2e", Prisoners = "#fbcc50", PWID = "#7ecfc0")) + 
-  labs(title = glue(
-    "{current_fyq} {southern_africa[2]}, VLC (top label) and VLS (bottom) by kp"
-    )) 
-
-vl_by_kp_country %>% 
-  select(-vlc, -vls) %>%
-  group_by(country) %>%
-  summarise(TX_PVLS_D = sum(TX_PVLS_D),
-            TX_PVLS_N = sum(TX_PVLS_N),
-            TX_CURR_Lag2 = sum(coalesce(TX_CURR_Lag2,0)),
-            .groups = "drop") %>% 
-  mutate(vls = TX_PVLS_N/TX_PVLS_D,
-         vlc = TX_PVLS_D/TX_CURR_Lag2) %>% 
-  ggplot2::ggplot(aes(x=vlc, y=vls, group=country)) +   
-  # geom_point() +
-  geom_text(aes(label = str_c(scales::percent(vlc, accuracy = 1))), 
-            nudge_y = .01) + 
-  geom_text(aes(label = str_c(scales::percent(vls, accuracy = 1))), 
-            nudge_y = -.01) + 
-  geom_text(aes(label = country)) +   
-  si_style_xyline() + 
-  theme(legend.position = "bottom", axis.title.x = element_blank()) + 
-  labs(title = glue(
-    "{current_fyq} VLC (top label) and VLS (bottom) by country among KP"
-    )) 
-
+# 
+# vl_by_agency_country %>% filter(country==southern_africa[1]) %>% 
+#   ggplot2::ggplot(aes(x=vlc, y=vls, color=funding_agency)) + 
+#   geom_point(size=3.5) +
+#   geom_text(aes(label = str_c(scales::percent(vlc, accuracy = 1))), 
+#             nudge_y = .02) + 
+#   geom_text(aes(label = str_c(scales::percent(vls, accuracy = 1))), 
+#             nudge_y = -.02) + 
+#   ylim(.8,1.2) + xlim(.8,1.2) + 
+#   si_style_xyline() + 
+#   theme(legend.position = "bottom", axis.title.x = element_blank()) + 
+#   scale_color_manual(values = c(
+#                          USAID = "#002f6c", CDC = "#a7c6ed", 
+#                         'State Dept.' = "#651d32", Dedup = "#6ca18f", 
+#                         DOD = "#ba0c2f")) + 
+#   labs(title = glue(
+#     "{current_fyq} {southern_africa[1]}, VLC (top label) and VLS (bottom) by agency among KP"
+#     )) 
+# 
+# vl_by_kp_country %>% filter(country==southern_africa[2]) %>% 
+#   ggplot2::ggplot(aes(x=vlc, y=vls, color=keypop)) +   geom_point(size=3.5) +
+#   geom_text(aes(label = str_c(scales::percent(vlc, accuracy = 1))), 
+#             nudge_y = .005) + 
+#   geom_text(aes(label = str_c(scales::percent(vls, accuracy = 1))), 
+#             nudge_y = -.005) + 
+#   si_style_xyline() + 
+#   theme(legend.position = "bottom", axis.title.x = element_blank()) + 
+#   scale_color_manual(values = c(FSW = "#005e7a", MSM = "#f28965", TG = "#990d2e", Prisoners = "#fbcc50", PWID = "#7ecfc0")) + 
+#   labs(title = glue(
+#     "{current_fyq} {southern_africa[2]}, VLC (top label) and VLS (bottom) by kp"
+#     )) 
+# 
+# vl_by_kp_country %>% 
+#   select(-vlc, -vls) %>%
+#   group_by(country) %>%
+#   summarise(TX_PVLS_D = sum(TX_PVLS_D),
+#             TX_PVLS_N = sum(TX_PVLS_N),
+#             TX_CURR_Lag2 = sum(coalesce(TX_CURR_Lag2,0)),
+#             .groups = "drop") %>% 
+#   mutate(vls = TX_PVLS_N/TX_PVLS_D,
+#          vlc = TX_PVLS_D/TX_CURR_Lag2) %>% 
+#   ggplot2::ggplot(aes(x=vlc, y=vls, group=country)) +   
+#   # geom_point() +
+#   geom_text(aes(label = str_c(scales::percent(vlc, accuracy = 1))), 
+#             nudge_y = .01) + 
+#   geom_text(aes(label = str_c(scales::percent(vls, accuracy = 1))), 
+#             nudge_y = -.01) + 
+#   geom_text(aes(label = country)) +   
+#   si_style_xyline() + 
+#   theme(legend.position = "bottom", axis.title.x = element_blank()) + 
+#   labs(title = glue(
+#     "{current_fyq} VLC (top label) and VLS (bottom) by country among KP"
+#     )) 
+# 
 
 
 
@@ -139,7 +148,9 @@ vl_by_kp_country %>%
 
 5c,d - Data prep: GP-KP
 
-[VLC](https://tableau.usaid.gov/views/KeyPopulationsDashboard/5_cVLCKP-GP/74c36036-3039-47f1-a215-867ba58308e4/8a6bc501-922c-4002-a454-d63c3fec56d2?:display_count=n&:showVizHome=n&:origin=viz_share_link), [VLS](https://tableau.usaid.gov/views/KeyPopulationsDashboard/5_dVLSKP-GP?:showAppBanner=false&:display_count=n&:showVizHome=n&:origin=viz_share_link) country5
+need to create lagged variables and GP
+
+For Q2 we compared values to known truths instead
 
 ```{r}
 
