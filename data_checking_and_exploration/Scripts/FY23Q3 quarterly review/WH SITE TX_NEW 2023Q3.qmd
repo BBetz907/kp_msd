@@ -1,0 +1,221 @@
+---
+title: "read_msd"
+author: "Bourke Betz"
+format: html
+editor: visual
+---
+
+Identify the name of the latest PSNU x IM MER Structured Data Set
+
+```{r}
+
+file <- glamr::return_latest(folderpath =  "../../Data/", pattern = "Site")
+
+
+
+file_name <- str_extract(file, "(?<=Data\\/).+(?=\\.rds)") 
+
+file_named <- str_extract(file_name, "^.+v[0-9]_[0-9]")
+
+```
+
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
+
+Read MSD
+
+```{r}
+wh_site_df <- gophr::read_psd(file, save_rds = TRUE, remove_txt = FALSE)
+```
+
+transform
+
+```{r}
+tx_indicators <- c("TX_NET_NEW neg", "TX_NET_NEW", "TX_CURR")
+
+df_tx_j <- wh_site_df %>%  
+  mutate(funding_agency = 
+        recode(funding_agency, "HHS/CDC" = "CDC")) %>%
+  filter(indicator %in% tx_indicators,
+         disaggregate == "Age/Sex/HIVStatus",
+         country == "Jamaica",
+         fiscal_year == 2023,
+         sitename != "Data reported above Site level") %>% 
+  mutate(indicator = factor(indicator, levels = (tx_indicators))) %>% 
+  arrange(indicator) 
+```
+
+```{r}
+df_tx_j_byfy <- df_tx_j %>% 
+  mutate(
+         cumulative = coalesce(cumulative, 0),
+         targets = coalesce(targets, 0),
+         fy = fiscal_year,
+         partner = prime_partner_name) %>%
+  group_by(operatingunit, country, snu1, psnu, sitename, sitetype, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, fy) %>%
+  summarize(targets = sum(targets), 
+            results = sum(cumulative), 
+            .groups = "drop") %>% 
+  mutate(tx_curr = if_else(indicator=="TX_CURR", results, 0),
+         tx_net_new = case_when(indicator=="TX_NET_NEW" &
+                                  results !=0 ~ results),
+         tx_net_new0 = if_else(indicator=="TX_NET_NEW", 
+                               replace_na(tx_net_new, 0), 
+                               tx_net_new),
+         sitename = if_else(str_detect(sitename, "\\("),
+                            str_extract(sitename, "(?<=\\().+(?=\\))"),
+                            sitename),
+         sitename = fct_reorder(sitename, desc(tx_curr)),
+         indicator_color = if_else(indicator == "TX_NET_NEW" & results < 0,
+                                   "TX_NET_NEW neg", indicator),
+         indicator_color = factor(indicator_color, levels = (tx_indicators)))
+
+df_tx_j_byq <- df_tx_j %>% 
+  mutate(
+         cumulative = coalesce(cumulative, 0),
+         targets = coalesce(targets, 0),
+         fy = fiscal_year,
+         partner = prime_partner_name) %>%  
+  pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>% 
+  mutate(results = coalesce(results, 0),
+         qtr = str_replace(qtr, "qtr","Q"),
+         fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr)) %>%
+    filter(fyq =="FY23 Q2") %>%
+  group_by(operatingunit, country, snu1, psnu, sitename, sitetype, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, fyq) %>% 
+  summarize(results = sum(results), 
+            .groups = "drop") %>% 
+  mutate(tx_curr = if_else(indicator=="TX_CURR", results, 0),
+         tx_net_new = case_when(indicator=="TX_NET_NEW" &
+                                  results !=0 ~ results),
+         tx_net_new0 = if_else(indicator=="TX_NET_NEW", 
+                               replace_na(tx_net_new, 0), 
+                               tx_net_new),
+         sitename = if_else(str_detect(sitename, "\\("),
+                            str_extract(sitename, "(?<=\\().+(?=\\))"),
+                            sitename),
+         sitename = fct_reorder(sitename, desc(tx_curr)),
+         indicator_color = if_else(indicator == "TX_NET_NEW" & results < 0,
+                                   "TX_NET_NEW neg", indicator),
+         indicator_color = factor(indicator_color, levels = (tx_indicators))) 
+```
+
+add color, reorder
+
+```{r}
+df_tx_j_byfy %>% 
+  filter(results!=0) %>%
+  ggplot(mapping = aes(y=indicator, x=results, group=sitename, 
+                       fill=indicator_color)) +
+  geom_col() + scale_fill_manual(values= c(old_rose, scooter_light, scooter)) +
+  geom_text(aes(label = tx_net_new, color = indicator_color, 
+                hjust = (.5 - sign(results)/1.5)), 
+            ) +
+  scale_color_manual(values= c(old_rose, scooter_light, scooter)) +
+  facet_wrap(~sitename, ncol= 1, strip.position = "left",
+             labeller = label_wrap_gen(width = 22)) + 
+  xlim(-300, 2000) +
+  theme(strip.placement = "outside",
+        strip.text.y.left = element_text(angle = 0, hjust = 1),
+        strip.background = element_blank(),
+        panel.background = element_blank() ,
+        axis.line.x.bottom = element_line(color = grey40k),
+        axis.line.y.left = element_line(color = grey40k),
+        axis.title = element_blank(),
+        legend.position = "none",
+        plot.title.position = "plot") +
+    labs(title = glue::glue("{df_tx_j_byfy$country}, {df_tx_j_byfy$fy} TX performance by site"),
+         subtitle = "",
+         caption = glue::glue("Data source: {file_named}"))
+
+ggsave(filename = "../../Images/JamaicaTXsites.png", plot=last_plot(), width = 6, height = 8)
+```
+
+```{r}
+df_tx_j_byfy %>% 
+    mutate(sitename = fct_reorder(sitename, (tx_net_new0), .na_rm=TRUE)) %>% 
+  ggplot(mapping = aes(y=indicator, x=results, group=sitename, 
+                       fill=indicator_color)) +
+  geom_col() + scale_fill_manual(values= c(old_rose, scooter_light, scooter)) +
+  geom_text(aes(label = tx_net_new, color = indicator_color, 
+                hjust = (.5 - sign(results)/1.5)), 
+            ) +
+  scale_color_manual(values= c(old_rose, scooter_light, scooter)) +
+  facet_wrap(~sitename, ncol= 1, strip.position = "left",
+             labeller = label_wrap_gen(width = 22)) + 
+  xlim(-300, 2000) +
+  theme(strip.placement = "outside",
+        strip.text.y.left = element_text(angle = 0, hjust = 1),
+        strip.background = element_blank(),
+        panel.background = element_blank() ,
+        axis.line.x.bottom = element_line(color = grey40k),
+        axis.line.y.left = element_line(color = grey40k),
+        axis.title = element_blank(),
+        legend.position = "none",
+        plot.title.position = "plot") +
+    labs(title = glue::glue("{df_tx_j_byfy$country}, {df_tx_j_byfy$fy} TX performance by site"),
+         subtitle = "",
+         caption = glue::glue("Data source: {file_named}"))
+
+ggsave(filename = "../../Images/JamaicaTXsites_resorted.png", plot=last_plot(), width = 6, height = 8)
+```
+
+```{r}
+df_tx_j_byq %>% 
+  filter(results!=0) %>%
+  # mutate(         sitename = fct_reorder(sitename, (tx_net_new))) %>%
+  ggplot(mapping = aes(y=indicator, x=results, group=sitename, 
+                       fill=indicator_color)) +
+  geom_col() + scale_fill_manual(values= c(old_rose, scooter_light, scooter)) +
+  geom_text(aes(label = tx_net_new, color = indicator_color, 
+                hjust = (.5 - sign(results)/1.5)), 
+            ) +
+  scale_color_manual(values= c(old_rose, scooter_light, scooter)) +
+  facet_wrap(~sitename, ncol= 1, strip.position = "left",
+             labeller = label_wrap_gen(width = 22)) + 
+  xlim(-300, 2000) +
+  theme(strip.placement = "outside",
+        strip.text.y.left = element_text(angle = 0, hjust = 1),
+        strip.background = element_blank(),
+        panel.background = element_blank() ,
+        axis.line.x.bottom = element_line(color = grey40k),
+        axis.line.y.left = element_line(color = grey40k),
+        axis.title = element_blank(),
+        legend.position = "none",
+        plot.title.position = "plot") +
+    labs(title = glue::glue("{df_tx_j_byq$country}, {df_tx_j_byq$fyq} TX performance by site"),
+         subtitle = "",
+         caption = glue::glue("Data source: {file_named}"))
+
+ggsave(filename = "../../Images/JamaicaTXsites_byq.png", plot=last_plot(), width = 6, height = 8)
+```
+
+sorted by TX_NET_NEW
+
+```{r}
+df_tx_j_byq %>% 
+  filter(results!=0) %>%
+  mutate(         sitename = fct_reorder(sitename, (tx_net_new0), .na_rm=TRUE)) %>%
+  ggplot(mapping = aes(y=indicator, x=results, group=sitename, 
+                       fill=indicator_color)) +
+  geom_col() + scale_fill_manual(values= c(old_rose, scooter_light, scooter)) +
+  geom_text(aes(label = tx_net_new, color = indicator_color, 
+                hjust = (.5 - sign(results)/1.5)), 
+            ) +
+  scale_color_manual(values= c(old_rose, scooter_light, scooter)) +
+  facet_wrap(~sitename, ncol= 1, strip.position = "left",
+             labeller = label_wrap_gen(width = 22)) + 
+  xlim(-300, 2000) +
+  theme(strip.placement = "outside",
+        strip.text.y.left = element_text(angle = 0, hjust = 1),
+        strip.background = element_blank(),
+        panel.background = element_blank() ,
+        axis.line.x.bottom = element_line(color = grey40k),
+        axis.line.y.left = element_line(color = grey40k),
+        axis.title = element_blank(),
+        legend.position = "none",
+        plot.title.position = "plot") +
+    labs(title = glue::glue("{df_tx_j_byq$country}, {df_tx_j_byq$fyq} TX performance by site"),
+         subtitle = "",
+         caption = glue::glue("Data source: {file_named}"))
+
+ggsave(filename = "../../Images/JamaicaTXsites_byq_resorted.png", plot=last_plot(), width = 6, height = 8)
+```

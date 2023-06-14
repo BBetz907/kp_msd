@@ -12,6 +12,7 @@
 *.zip
 *.png
 *.twbx
+*.twb
 *.pptx
 *.Rproj
 *.html

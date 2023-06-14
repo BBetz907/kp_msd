@@ -66,6 +66,9 @@ url_nat_subnat <- mer_items %>%
 
 grabr::pano_download(item_url = url_nat_subnat, session = sess)
 
+mer_items
+
+
 
 # Download archived PSNUxIM MSD ------------------------------------------------
 url_archived_msd <- mer_items[1,4] %>% pull(path) #enter directory for FY15 - ... from mer_items
@@ -97,10 +100,21 @@ mer_site_region <- mer_items3 %>%
          str_detect(item, "Region")) %>%
   pull(path) 
 
-mer_site_region[1]
+mer_site_region[3]
 
 grabr::pano_download(item_url = mer_site_region[1], session = sess)
 grabr::pano_download(item_url = mer_site_region[3], session = sess)
 
 #learn how to iterate this step
 
+
+# Download calculations across time PSNUxIM MSD ------------------------------------------------
+url_across_time <- mer_items[2,4] %>% pull(path) #enter directory for FY15 - ... from mer_items
+mer_items4 <- grabr::pano_content(page_url = url_across_time, session = sess) %>%
+  grabr::pano_elements(page_url = url_across_time)
+
+mer_ou_across_time <- mer_items4 %>%
+  filter(type == "file zip_file",
+         # str_detect(item, "Region")
+         ) %>%
+  pull(path) 
