@@ -1,0 +1,31 @@
+---
+title: "7ab"
+format: html
+editor: visual
+---
+
+## 
+
+```{r}
+mmd %>%
+  filter(str_detect(indicator, "TX_CURR_ARV"),
+         country == "Democratic Republic of the Congo",
+         disaggregate == "Total Numerator",
+         funding_agency == "USAID",
+         fy == 2023) %>%
+  group_by(country, indicator, mech_code) %>%
+  summarise(results = sum(cumulative)) %>%
+  print()
+
+
+mmd %>%
+  filter(str_detect(indicator, "TX_CURR_ARV"),
+         country %in% c("Panama","Ghana"),
+         disaggregate == "Total Numerator",
+         funding_agency == "USAID",
+         fy == 2023) %>%
+  group_by(country, indicator, mech_name) %>%
+  summarise(results = sum(cumulative)) %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  print()
+```

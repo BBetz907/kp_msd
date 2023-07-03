@@ -1,0 +1,56 @@
+---
+title: "data_checking_vl"
+format: html
+editor: visual
+---
+
+#6a
+
+```{r}
+kp_tx_disagg_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR")
+
+
+check %>% filter(
+  operatingunit == "Asia Region",
+  disagg == "KP", 
+  fy == current_fy,
+  indicator %in% kp_tx_disagg_indicators) %>%
+  group_by(country, indicator) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  arrange(desc(TX_CURR)) %>%
+  print()
+```
+
+6b - [TX_ML - usaid](https://tableau.usaid.gov/views/KeyPopulationsDashboard/6_bKPTX_ML/a3af8b22-db55-446a-aa16-a94b51cc9e18/90c15629-ec9e-4370-b271-f788df6f3d9c?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+check %>% filter(
+  country %in% c("Kazakhstan", "Kyrgyzstan", "Tajikistan"),
+  disagg == "KP", 
+  fy == current_fy,
+  indicator == "TX_ML") %>%
+  group_by(operatingunit, keypop, tx_ml_reason) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% 
+  pivot_wider(values_from = sum.results, names_from = tx_ml_reason) %>%
+  clean_names() |> 
+  mutate(kp_total=rowSums(across(3:8), na.rm = TRUE)) |> 
+  relocate(kp_total, .after = keypop) |> 
+  print()
+ 
+
+ 
+#how to calculate percent of total? question for another round
+
+
+ check %>% filter(
+  country %in% c("Kazakhstan", "Kyrgyzstan", "Tajikistan"),
+  disagg == "KP", 
+  fy == current_fy,
+  indicator == "TX_ML") %>%  group_by(operatingunit, keypop) %>%
+  summarise(sum.results=sum(cumulative),
+            .groups = "drop") %>% 
+ mutate(percent_results = scales::percent((sum.results / sum(sum.results)))) %>%
+  print()
+
+```

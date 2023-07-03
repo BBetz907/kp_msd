@@ -1,0 +1,121 @@
+---
+title: "2abf"
+format: html
+editor: visual
+---
+
+2a -[linkage trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_aTestingandLinkageTrends/40426f3a-6e0b-4ada-897c-dfe5461884db/17a3ec3f-a566-49cb-add4-e53293d0ba54?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+library(glue)
+country1 <- "Panama"
+country2 <- "Thailand"
+
+linkage1 <- qcheck %>%
+  filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
+         disagg == "KP",
+         country== country1) %>%
+  group_by(country, indicator, disagg, fyq) %>%
+  summarise(results = sum(results), .groups = "drop") 
+
+linkage1 %>%  
+  ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + 
+  geom_line() + 
+  geom_text(position = position_nudge(y=30), aes(label = results)) +
+  scale_color_manual(values = c(HTS_TST_POS = "#808080", TX_NEW = "#1e87a5")) +
+  si_style_nolines() + 
+  labs(title = glue::glue("PEPFAR {country1} {linkage1$disagg} trends"))
+
+linkage2 <- qcheck %>%
+  filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
+         disagg == "KP",
+         keypop == "FSW",
+         country== country2) %>%
+  group_by(country, indicator, keypop, fyq) %>%
+  summarise(results = sum(results)) 
+
+linkage2 %>%  ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + geom_line() + geom_text(position = position_nudge(y=30), aes(label = results)) +
+  scale_color_manual(values = c(HTS_TST_POS = "#808080", TX_NEW = "#1e87a5")) + si_style_nolines() + labs(title = glue("PEPFAR {country2} {linkage2$keypop} trends"))
+
+```
+
+2b - [TX trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_bTXTrends/cec16239-2ef8-43d9-ad2e-c6f04068e95b/6571f6c6-2393-4c5f-a7dd-718a22cf582a?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+# qcheck %>%
+#   filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+#          disagg == "KP",
+#          country== country1,
+#         results!=0) %>%
+#   select(country, indicator, fyq, results) %>%
+#   group_by(country, indicator, fyq) %>%
+#   summarise(results = sum(results)) %>%
+#   arrange(desc(fyq)) %>%
+#   print()
+
+qcheck %>%
+  filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+         disagg == "KP",
+        country== country2,
+        results!=0) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  arrange(desc(fyq)) %>%
+  print()
+```
+
+2c - [VL trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_cVLTrends?:showAppBanner=false&:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+vl_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2", "TX_CURR")
+countries <- c("Eswatini", "Zambia")
+
+pvls_trends_country <- qcheck %>% filter(
+  country %in% countries,
+  disagg == "KP", 
+  results!=0, indicator %in% vl_indicators) %>%
+  group_by(fyq, country, disagg, indicator) %>%
+  summarise(sum.results=sum(results), .groups = "drop") %>% print()
+  
+  
+  
+pvls_trends_country %>% pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         # vlc = TX_PVLS_D/TX_CURR_Lag2
+         ) %>% print()
+
+
+pvls_trends_country %>% 
+  filter(str_detect(indicator, "PVLS"), country == countries[1]) %>%
+  ggplot2::ggplot(aes(x = indicator, y=sum.results, fill=indicator)) + geom_col() + geom_text(aes(label = sum.results), position = position_nudge(y=200)) + facet_grid(~fyq) +   scale_fill_manual(values = c(TX_CURR = grey10k, TX_PVLS_D = "#64b4a6", TX_PVLS_N = "#004e43")) + si_style_nolines() + theme(axis.text.x = element_text(angle=90), axis.title.x = element_blank(), legend.position = "none") + labs(
+    title = glue::glue("PEPFAR {countries[1]} {pvls_trends_country$disagg}")
+  )
+
+pvls_trends_country %>% 
+  filter(str_detect(indicator, "PVLS"), country == countries[2])  %>%
+  ggplot2::ggplot(aes(x = indicator, y=sum.results, fill=indicator)) + geom_col() + geom_text(aes(label = sum.results), position = position_nudge(y=300)) + facet_grid(~fyq) +   scale_fill_manual(values = c(TX_CURR = grey10k, TX_PVLS_D = "#64b4a6", TX_PVLS_N = "#004e43")) + si_style_nolines()  + theme(axis.text.x = element_text(angle=90), axis.title.x = element_blank(), legend.position = "none") + labs(
+    title = glue::glue("PEPFAR {countries[2]} {pvls_trends_country$disagg}"))
+```
+
+2f - [PrEP Trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_fPrEPTrends?:showAppBanner=false&:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+#| echo: false
+
+
+prep_trends <- qcheck %>%
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         disagg == "KP",
+         country %in% countries) %>%
+  group_by(country, indicator, disagg, fyq) %>%
+  summarise(results = sum(results), .groups="drop") 
+
+prep_trends %>% filter(country == countries[1]) %>%
+  ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + geom_line() + geom_text(position = position_nudge(y=10), aes(label = results)) +
+  scale_color_manual(values = c(PrEP_NEW = "#8980cb", PrEP_CT = "#808080")) + si_style_nolines() + labs(title = glue("PEPFAR {countries[1]} {prep_trends$disagg} trends "))
+
+prep_trends %>% filter(country == countries[2]) %>%
+  ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + geom_line() + geom_text(position = position_nudge(y=30), aes(label = results)) +
+  scale_color_manual(values = c(PrEP_NEW = "#8980cb", PrEP_CT = "#808080")) + si_style_nolines() + labs(title = glue("PEPFAR {countries[2]} {prep_trends$disagg} trends "))
+```

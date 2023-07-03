@@ -1,0 +1,236 @@
+---
+title: "People in prisons targets"
+author: "Bourke Betz"
+format: html
+editor: visual
+execute: 
+  fig-width: 8
+  fig-asp: 0.618
+  fig-align: center
+  warning: FALSE
+  message: FALSE
+---
+
+## Identify a list of OUs and indicators with targets for People in prisons
+
+### list packages
+
+```{r}
+#| echo: false
+
+library(tidyverse)
+library(janitor)
+library(gagglr)
+library(patchwork)
+
+
+```
+
+## transform
+
+Started with OU-level data, filtered to the last 2 fiscal years, people in prisons, and targets \>0
+
+```{r}
+#| echo: false
+rds <- glamr::return_latest(folderpath =  "../../Data/", 
+                            pattern = "OU_IM_FY2.+\\.rds")
+```
+
+```{r}
+#| echo: false
+prisoner_targets <- readRDS(file = rds) |>
+  filter(fiscal_year >= max(fiscal_year)-2,
+         !indicator %in% c("HTS_RECENT", "PrEP_CURR"),
+         disaggregate != "KeyPop/Status",
+         otherdisaggregate_sub == "People in prisons and other enclosed settings")
+```
+
+## group by indicator, ou to showcase trends
+
+```{r}
+annual_cols <- c("targets", "cumulative")
+indicators_with_denominators <- prisoner_targets |> filter(numeratordenom=="D") |> group_by(indicator) |> summarise() |> as.list()
+
+
+usaid_pip <- prisoner_targets |>   
+  filter(funding_agency == "USAID") |> 
+  mutate(pop = tolower(otherdisaggregate_sub),
+         indicator = if_else(indicator %in% indicators_with_denominators, 
+         str_c(indicator, numeratordenom, sep="_"), 
+         indicator),
+         country = if_else(country=="Democratic Republic of the Congo", 
+                           "DRC", country)) |> 
+  group_by(operatingunit, country, indicator, numeratordenom, 
+           pop, funding_agency, fiscal_year) |> 
+  summarise(across(all_of(annual_cols), ~sum(.x, na.rm = TRUE)),  .groups = "drop") 
+
+
+
+pepfar_pip <- prisoner_targets |>      
+  mutate(pop = tolower(otherdisaggregate_sub),
+         indicator = if_else(indicator %in% indicators_with_denominators, 
+         str_c(indicator, numeratordenom, sep="_"), 
+         indicator),
+         country = if_else(country=="Democratic Republic of the Congo", 
+                           "DRC", country)) |> 
+  group_by(operatingunit, country, funding_agency, indicator, numeratordenom, 
+           pop, fiscal_year) |> 
+  summarise(across(all_of(annual_cols), ~sum(.x, na.rm = TRUE)),  .groups = "drop")
+
+
+```
+
+name cascade order
+
+```{r}
+ind_prev <- c("KP_PREV", "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW")
+ind_tx <- c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
+```
+
+## Check snapshot TX cascade totals and achievment
+
+only discrepancy was the casefinding and TX_NEW as some clients who are referred are excluded to facillitate use of custom indicators. Numbers match cascades, but intentionally do not match the high level numbers pos and tx_new numbers which reflect deduplication.
+
+```{r}
+# top <- 
+p_ut <- usaid_pip |> filter(indicator %in% ind_tx) |>  
+  group_by(fiscal_year, indicator, funding_agency, pop) |> 
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") |> 
+  mutate(indicator = fct_relevel(indicator, ind_tx),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+    arrange(desc(fiscal_year), desc(funding_agency)) |> print()
+
+  
+p_ut |> ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  geom_text(aes(y=top_col,
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~fiscal_year, nrow = 1) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=18, hjust=0.5)) +
+  labs(title = str_glue("FY23Q2 {p_ut$funding_agency} treatment cascade trehds for {p_ut$pop}"),
+       subtitle = "")
+
+```
+
+## Check snapshot prevention cascade totals and achievment,
+
+no issues
+
+```{r}
+# top <- 
+p_up <- usaid_pip |> filter(indicator %in% ind_prev) |>  
+  group_by(fiscal_year, indicator, funding_agency, pop) |> 
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") |> 
+  mutate(indicator = fct_relevel(indicator, ind_prev),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  arrange(desc(fiscal_year)) |> print()
+  
+ p_up |>  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  geom_text(aes(y=top_col,
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~fiscal_year, nrow = 1) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=18, hjust=0.5)) +
+  labs(title = str_glue("FY23Q2 {p_up$funding_agency} prevention cascade trehds for {p_up$pop}"),
+       subtitle = "")
+
+```
+
+## check section 1a, 1b by fiscal year
+
+TX_NEW ach for 1a, testing and prev for 1b
+
+```{r}
+p_up_trends <- usaid_pip |> filter(indicator %in% ind_prev) |>  
+  filter(indicator %in% c("KP_PREV", "HTS_TST", "HTS_SELF")) |> 
+  group_by(fiscal_year, indicator, funding_agency, pop) |> 
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") |> 
+  mutate(indicator = fct_relevel(indicator, ind_prev),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  arrange(desc(fiscal_year)) |> print()
+  
+ p_up_trends |>  ggplot(aes(x=fiscal_year, y=cumulative, color=indicator)) +
+  geom_line() +
+  geom_text(aes(label = cumulative),
+            vjust=-0.75, size=5, color=grey80k) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=18, hjust=0.5)) +
+  labs(title = str_glue("FY23Q2 {p_up_trends$funding_agency} prevention cascade trehds for {p_up_trends$pop}"),
+       subtitle = "")
+```
+
+## Check 1c by funding agency
+
+```{r}
+p_pp_trends <- pepfar_pip |> filter(indicator %in% ind_prev) |>  
+  filter(indicator %in% c("PrEP_NEW")) |> 
+  group_by(fiscal_year, indicator, funding_agency, pop) |> 
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") |> 
+  mutate(indicator = fct_relevel(indicator, ind_prev),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  arrange(desc(fiscal_year)) |> print()
+  
+ p_pp_trends |>  ggplot(aes(x=fiscal_year, y=cumulative, color=funding_agency)) +
+  geom_line(aes(grou=funding_agency)) +
+  geom_text(aes(label = cumulative),
+            vjust=-0.75, size=5, color=grey80k) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=18, hjust=0.5)) +
+  labs(title = str_glue("FY23Q2 {p_pp_trends$funding_agency} prevention cascade trehds for {p_pp_trends$pop}"),
+       subtitle = "")
+ 
+ #off by 4, due to Jamaica CDC
+ p_pp_trends <- pepfar_pip |> filter(indicator %in% ind_prev) |>  
+  filter(indicator %in% c("PrEP_NEW"),
+         funding_agency == "HHS/CDC",
+         fiscal_year == 2023) |> 
+  group_by(fiscal_year, country, indicator, funding_agency, pop) |> 
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") |> 
+  mutate(indicator = fct_relevel(indicator, ind_prev),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  arrange(desc(cumulative)) |> print()
+  
+ #Explore further
+readRDS(file = rds) |>
+  filter(fiscal_year ==2023,
+         indicator %in% c("PrEP_NEW"),
+         country == "Jamaica",
+         disaggregate != "KeyPop/Status",
+         otherdisaggregate_sub %in% c("People in prisons and other enclosed settings", "MSM"))
+
+#There is likely a duplication somewhere as the dashboard shows double the values in the data for PrEP_NEW
+```
+
+There is likely a duplication somewhere as the dashboard shows double the values in the data for PrEP_NEW for both MSM and Prisoners in Jamaica for mech code 81219. **This was corrected as of 2 July 2023, based on code changes made June 30 to resolve a merge error 1:many on geographic units for some regional programs.**
