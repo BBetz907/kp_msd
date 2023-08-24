@@ -1,0 +1,81 @@
+---
+title: "read_msd"
+author: "Bourke Betz"
+format: html
+editor: visual
+params: 
+  fiscal_year: 2022
+  population: "KP"
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+Identify the name of the latest PSNU x IM MER Structured Data Set
+
+```{r}
+
+psnu <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY2")
+psnu_file_name <- str_extract(PSNU, "(?<=Data\\/).+(?=\\.rds)") 
+
+```
+
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
+
+Read MSD
+
+```{r}
+psnu_df <- gophr::read_psd(psnu, save_rds = TRUE, remove_txt = FALSE)
+
+```
+
+Define country of interest
+
+```{r}
+gpc_country <- c("Angola", "Botswana", "Brazil", "Cameroon", "China", "Cote d'Ivoire", "Democratic Republic of the Congo", "DRC",
+"Eswatini", "Ethiopia", "Ghana", "India", "Indonesia", "Iran", "Kenya", "Lesotho", "Malawi", "Mexico",
+"Mozambique", "Myanmar", "Burma","Namibia", "Nigeria", "Pakistan", "South Africa", "Uganda", "Ukraine", "Tanzania","Zambia", "Zimbabwe")
+
+```
+
+Filter and transform
+
+```{r}
+df <- psnu_df |>  
+  filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
+         fiscal_year == params$fiscal_year,
+         indicator %in% c("KP_PREV", "TX_CURR"),
+         disaggregate != "KeyPop/Status",
+         country %in% gpc_country) |>
+  # mutate(indicator = 
+  #          recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
+  #                 funding_agency = recode(funding_agency, "HHS/CDC" = "CDC")) |>
+  filter(indicator %in% c("KP_PREV", "TX_CURR")) |> 
+  mutate(cumulative = coalesce(cumulative, 0),
+         targets = coalesce(targets, 0),
+         fy = fiscal_year,
+         partner = prime_partner_name,
+         disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
+         disagg = recode(disagg, "KeyPop" = "KP"),
+         tx_ml_reason = case_when(indicator=="TX_ML" ~ 
+              str_extract(otherdisaggregate, "(?<=Outcome\\s-\\s).+")),
+              keypop = str_extract(otherdisaggregate,
+                      "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
+         keypop = recode(keypop, "People in prisons" = "Prisoners")) |>
+  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, tx_ml_reason, keypop, fy, targets, cumulative) |> 
+  filter(disagg==params$population)
+```
+
+```{r}
+gpc <- df |> 
+  select(country, fy,  keypop, indicator, cumulative) |> 
+  mutate(cumulative = coalesce(cumulative, 0)) |>
+  group_by(country, fy,  keypop, indicator) |>
+  summarise(cumulative = sum(cumulative),  .groups = 'drop') |>
+  pivot_wider(names_from = indicator, values_from = cumulative) |>
+  mutate(KP_PREV  = coalesce(KP_PREV , 0),
+         TX_CURR  = coalesce(TX_CURR , 0)) |>
+  print(n=100)
+```

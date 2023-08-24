@@ -28,7 +28,7 @@ mer_df2 <- gophr::read_psd(file2, save_rds = TRUE, remove_txt = FALSE) %>%
   filter(fiscal_year>=2019)
 ```
 
-transform and exclude Ukraine
+transform
 
 ```{r}
 
@@ -44,9 +44,7 @@ df <- mer_df %>%
   mutate(indicator = 
            recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
                   funding_agency = recode(funding_agency, "HHS/CDC" = "CDC")) %>%
-  filter(indicator %in% indicator_list,
-                                     country != "Ukraine"
-         ) %>% 
+  filter(indicator %in% indicator_list) %>% 
   mutate(indicator = factor(indicator, levels = indicator_list)) %>% 
   arrange(indicator) %>% 
   glimpse()

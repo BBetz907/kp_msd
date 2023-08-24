@@ -1,0 +1,86 @@
+---
+title: "data_checking_vl"
+format: html
+editor: visual
+---
+
+5ab test
+
+```{r}
+vl <- check %>% filter(country == "Tanzania", disagg == "KP", str_detect(indicator, "PVLS"), fy == 2023) %>%
+  group_by(country, disagg, keypop, indicator) %>%
+  summarise(sum.cum=sum(cumulative), .groups = "drop") %>%
+  pivot_wider(names_from = indicator, values_from = sum.cum) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D) %>%
+  print() 
+```
+
+set parameters, prepare data
+
+```{r}
+
+vl_indicators <- c("TX_CURR_Lag2", "TX_PVLS_D", "TX_PVLS_N")
+ 
+nonreporters <- c("Ghana", "Liberia", "PNG", "Indonesia", "Vietnam", "Angola")
+
+southern_africa <- c("Lesotho", "Eswatini", "South Africa")
+
+
+lagged_vl_kp <- check %>% filter(indicator %in% vl_indicators) %>% 
+   # bind_rows(vlc_d) %>% 
+   filter(!country %in% nonreporters,
+          fy == current_fy,
+          country %in% southern_africa,
+          disagg == "KP" ) %>%
+  group_by(country, indicator, funding_agency, keypop) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% print()
+
+lagged_vl_kp %>% count(indicator)
+
+
+
+lagged_vl_total <- check %>% filter(indicator %in% vl_indicators) %>% 
+   # bind_rows(vlc_d) %>% 
+   filter(!country %in% nonreporters,
+          fy == current_fy,
+          country %in% southern_africa,
+          disagg != "KP" ) %>%
+  group_by(country, indicator, funding_agency, keypop) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% print()
+
+lagged_vl_total %>% count(indicator)
+
+
+```
+
+5abd table summarizing VLC and such by country
+
+#Eswatini CDC numbers are different. All USAID are OK
+
+```{r}
+lagged_vl_kp %>%   group_by(country, indicator) %>%
+  summarise(sum.results=sum(sum.results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = scales::percent(TX_PVLS_N/TX_PVLS_D, accuracy = 1),
+         # vlc =  scales::percent(TX_PVLS_D/TX_CURR_Lag2,accuracy = 1),
+         # cohort_vls =  scales::percent(TX_PVLS_N/TX_CURR_Lag2,accuracy = 1)
+         )
+
+lagged_vl_kp_neg <- lagged_vl_kp |>  
+  group_by(country, indicator, funding_agency) |> 
+  summarise(sum.results = -sum(sum.results), .groups = "drop")
+
+lagged_vl_gp <- lagged_vl_total %>%   
+  group_by(country, indicator, funding_agency) |> 
+  summarise(sum.results=sum(sum.results), .groups = "drop") %>%
+    bind_rows(lagged_vl_kp_neg) |> 
+        group_by(country, funding_agency, indicator) %>%
+        summarise(sum.results=sum(sum.results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = scales::percent(TX_PVLS_N/TX_PVLS_D, accuracy = 1),
+         # vlc =  scales::percent(TX_PVLS_D/TX_CURR_Lag2,accuracy = 1),
+         # cohort_vls =  scales::percent(TX_PVLS_N/TX_CURR_Lag2,accuracy = 1)
+         ) |> print()
+```
+
+5C remains non-operational due to removal of "calculations across time" from the MSD at PSNU level
