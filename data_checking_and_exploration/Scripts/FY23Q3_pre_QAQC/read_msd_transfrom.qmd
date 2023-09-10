@@ -39,8 +39,8 @@ indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW"
                     "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
 df <- mer_df %>%  
-  rbind(mer_df2) %>%
-  filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE) %>%
+  # rbind(mer_df2) %>%
+  filter(str_detect(standardizeddisaggregate, "KeyPop|Total|Sex|Preg")) %>%
   mutate(indicator = 
            recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
                   funding_agency = recode(funding_agency, "HHS/CDC" = "CDC")) %>%
@@ -69,25 +69,31 @@ check <- df %>% filter(standardizeddisaggregate != "KeyPop/Status") %>%
 
 ```{r}
 
-qcheck <- df %>% filter(fiscal_year >= 2022, #cumulative and targets
-                       str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE                       ) %>%
+qcheck <- df %>% filter(fiscal_year >= 2022) %>%
   mutate(fy = fiscal_year,
          partner = prime_partner_name,
-         disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
-         disagg = recode(disagg, "KeyPop" = "KP"),
+         disagg = str_extract(standardizeddisaggregate, "KeyPop|Total|Age|Preg"),
+         disagg = recode(disagg, "KeyPop" = "KP",
+                                  "Preg" = "PregnantOrBreastfeeding",
+                                  "Age" = "Age/Sex"),
          keypop = str_extract(otherdisaggregate, "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
          keypop = recode(keypop, "People in prisons" = "Prisoners"),
          kp_prev_status = case_when(standardizeddisaggregate == "KeyPop/Status" ~ 
                                       str_extract(categoryoptioncomboname, 
                                                   "(?<=\\,\\s).+$"))
          ) %>% 
-  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, standardizeddisaggregate, otherdisaggregate, keypop, kp_prev_status, fy, qtr1, qtr2, qtr3, qtr4) %>%
+  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, otherdisaggregate, sex, ageasentered, standardizeddisaggregate, otherdisaggregate, keypop, kp_prev_status, fy, qtr1, qtr2, qtr3, qtr4) %>%
   mutate(indicator = factor(indicator, levels = indicator_list)) %>% arrange(indicator) %>%
   pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
   mutate(results = coalesce(results, 0),
          qtr = str_replace(qtr, "qtr","Q"),
          fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr))
 
+
+
+```
+
+```{r}
 
 modality <- mer_df %>% filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
                           str_detect(indicator, "HTS_TST") == TRUE) %>%
@@ -99,7 +105,6 @@ modality <- mer_df %>% filter(str_detect(standardizeddisaggregate, "KeyPop|Total
          age = trendscoarse) %>%
   select(operatingunit, country, snu1, psnu, prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom, standardizeddisaggregate, modality, fy, fyq, results, age, ageasentered, sex) %>%
   glimpse()
-
 ```
 
 ```{r}
