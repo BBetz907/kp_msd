@@ -1,0 +1,36 @@
+---
+title: "PrEP and young KP"
+author: "Bourke Betz"
+date: 2023-06-21
+format: 
+  html:
+    toc: true
+    toc-depth: 6
+editor: visual
+execute: 
+  fig-width: 8
+  fig-asp: 0.618
+  fig-align: center
+  warning: FALSE
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(gagglr)
+library(scales)
+```
+
+##Load mechanisms with >75% KP enrolling in PrEP and filter age/sex MSD by it
+
+```{r}
+prep_mech <- read.csv("../Dataout/mech_by_kp_PrEP_NEW.csv") %>% filter(prop_kp_grp == "75% +")
+
+
+msd <- glamr::return_latest(folderpath =  "../Data/", pattern = "PSNU_IM_FY2")
+
+prev <- gophr::read_psd(msd, save_rds = FALSE, remove_txt = FALSE) %>% 
+  filter(indicator %in% c("KP_PREV", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT")) %>% 
+  semi_join(prep_mech, by = c("country", "mech_code"))
+```
+

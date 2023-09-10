@@ -1,0 +1,399 @@
+---
+title: "People in prisons targets"
+author: "Bourke Betz"
+format: html
+editor: visual
+execute: 
+  fig-width: 8
+  fig-asp: 0.618
+  fig-align: center
+  warning: FALSE
+  message: FALSE
+---
+
+## Identify a list of OUs and indicators with targets for People in prisons
+
+list packages
+
+```{r}
+#| echo: false
+
+library(tidyverse)
+library(janitor)
+library(gagglr)
+library(patchwork)
+
+
+```
+
+Started with OU-level data, filtered to the last 2 fiscal years, people in prisons, and targets \>0
+
+```{r}
+#| echo: false
+rds <- glamr::return_latest(folderpath =  "../Data/", 
+                            pattern = "OU_IM_FY2.+\\.rds")
+
+prisoner_targets <- readRDS(file = rds) |>
+  filter(fiscal_year >= max(fiscal_year)-2,
+         !indicator %in% c("HTS_RECENT", "PrEP_CURR", "PrEP_CT", "HTS_SELF"),
+         disaggregate != "KeyPop/Status",
+         otherdisaggregate_sub == "People in prisons and other enclosed settings")
+```
+
+Group by indicator, ou to summarize targets
+
+```{r}
+prisoner_targets |> 
+  filter(fiscal_year == max(fiscal_year),
+         funding_agency == "USAID",
+         targets>0) |> 
+  mutate(pop = otherdisaggregate_sub,
+          indicators = if_else(indicator=="KP_PREV", indicator, 
+                              str_extract(indicator, "^.{2,4}(?=\\_)"))) |>
+  group_by(operatingunit, country, indicators, pop, funding_agency, fiscal_year) |>   summarize(targets = sum(targets, na.rm = TRUE), .groups = "drop") |>  
+  write_csv(file = "../Dataout/prisoner_targets_fy23_tableau.csv") |> 
+  pivot_wider(names_from = indicators, values_from = targets, 
+              names_glue = "{indicators}_targets") |> 
+  clean_names() |> 
+  mutate(across(hts_targets:tx_targets, ~case_when(.x>0 ~ "Yes"))) |> 
+  arrange(desc(funding_agency), fiscal_year) |> 
+  write_csv(file = "../Dataout/prisoner_targets_fy23.csv") 
+```
+
+Group by indicator, ou to showcase trends
+
+```{r}
+annual_cols <- c("targets", "cumulative")
+indicators_with_denominators <- prisoner_targets |> filter(numeratordenom=="D") |> group_by(indicator) |> summarise() |> as.list()
+
+
+usaid_pip <- prisoner_targets |>   
+  filter(funding_agency == "USAID") |> 
+  mutate(pop = tolower(otherdisaggregate_sub),
+         indicator = if_else(indicator %in% indicators_with_denominators, 
+         str_c(indicator, numeratordenom, sep="_"), 
+         indicator),
+         country = if_else(country=="Democratic Republic of the Congo", 
+                           "DRC", country)) |> 
+  group_by(operatingunit, country, indicator, numeratordenom, 
+           pop, funding_agency, fiscal_year) |> 
+  summarise(across(annual_cols, ~sum(.x, na.rm = TRUE)),  .groups = "drop") 
+
+
+
+pepfar_pip <- prisoner_targets |>      
+  mutate(pop = tolower(otherdisaggregate_sub),
+         funding_agency="PEPFAR",
+         indicator = if_else(indicator %in% indicators_with_denominators, 
+         str_c(indicator, numeratordenom, sep="_"), 
+         indicator),
+         country = if_else(country=="Democratic Republic of the Congo", 
+                           "DRC", country)) |> 
+  group_by(operatingunit, country, funding_agency, indicator, numeratordenom, 
+           pop, fiscal_year) |> 
+  summarise(across(annual_cols, ~sum(.x, na.rm = TRUE)),  .groups = "drop")
+
+
+```
+
+name cascade order
+
+```{r}
+ind_prev <- c("KP_PREV", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW")
+ind_tx <- c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
+```
+
+visualize positive cascade top level
+
+```{r}
+# top <- 
+usaid_pip |> filter(fiscal_year==max(fiscal_year),
+                     indicator %in% ind_tx) |>  
+  mutate(country=fct_reorder(country, desc(cumulative)),
+         indicator = fct_relevel(indicator, ind_tx),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  group_by(country) |> filter(cumulative>0) |>  ungroup() |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~country, nrow = 2) +
+  si_style_xyline() +
+  ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {usaid_pip$funding_agency} treatment cascade target achievment for {usaid_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_tx_cascade_usaid.png", plot = last_plot(), width = 19, height = 8.5)
+
+```
+
+```{r}
+# bottom <- 
+usaid_pip |> filter(fiscal_year==max(fiscal_year),
+                    country != "Eswatini",
+                     indicator %in% ind_prev) |>  
+  mutate(country=fct_reorder(country, desc(cumulative)),
+         indicator = fct_relevel(indicator, ind_prev),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  group_by(country) |> filter(cumulative>0) |> ungroup() |>
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=genoa) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color = grey80k) +
+  facet_wrap(~country, nrow = 2) +
+  si_style_xyline() +
+  ylim(0,14000) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {usaid_pip$funding_agency} Prevention cascade target achievment for {usaid_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_prev_cascade_usaid.png", plot = last_plot(), width = 19, height = 8.5)
+```
+
+PEPFAR wide numbers
+
+```{r}
+pepfar_pip_tx <- pepfar_pip |> filter(fiscal_year==max(fiscal_year),
+                     indicator %in% ind_tx) |>  
+  mutate(country=fct_reorder(country, desc(cumulative)),
+         indicator = fct_relevel(indicator, ind_tx),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  group_by(country) |> filter(cumulative>0) 
+
+top_filter <- pepfar_pip_tx |> 
+  summarize(top_col2 = sum(top_col)) |> 
+  arrange(desc(top_col2)) 
+
+top1 <- top_filter |> slice(1:10) |>  ungroup()  |>  select(country) 
+  
+  
+pepfar_pip_tx |> ungroup() |> 
+  inner_join(top1) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~country, ncol=5) +
+  si_style_xyline() +
+  ylim(0,13000) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {pepfar_pip$funding_agency} treatment cascade target achievment for {pepfar_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_tx_cascade_pepfar.png", plot = last_plot(), width = 19, height = 8.5)
+
+
+top2 <- top_filter |> slice(11:20) |>  ungroup()  |>  select(country) 
+  
+pepfar_pip_tx |> ungroup() |> 
+  inner_join(top2) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~country, ncol=5) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {pepfar_pip$funding_agency} treatment cascade target achievment for {pepfar_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_tx_cascade_pepfar2.png", plot = last_plot(), width = 19, height = 8.5)
+
+top3 <- top_filter |> slice(21:30) |>  ungroup()  |>  select(country) 
+  
+  
+pepfar_pip_tx |> ungroup() |> 
+  inner_join(top3) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~country, ncol=5) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {pepfar_pip$funding_agency} treatment cascade target achievment for {pepfar_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_tx_cascade_pepfar3.png", plot = last_plot(), width = 19, height = 8.5)
+```
+
+```{r}
+
+pepfar_pip_prev <- pepfar_pip |> filter(fiscal_year==max(fiscal_year),
+                     indicator %in% ind_prev) |>  
+  mutate(country=fct_reorder(country, desc(cumulative)),
+         indicator = fct_relevel(indicator, ind_prev),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  group_by(country) |> filter(cumulative>0) 
+
+top_filterp <- pepfar_pip_prev |> 
+  summarize(top_col2 = sum(top_col)) |> 
+  arrange(desc(top_col2)) 
+
+top1p <- top_filterp |> slice(1:10) |>  ungroup()  |>  select(country) 
+  
+  
+pepfar_pip_prev |> ungroup() |> 
+  inner_join(top1p) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=genoa) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~country, ncol=5) +
+  si_style_xyline() +
+  scale_y_continuous(limits = c(0,155000),
+                     labels = function(x) format(x, scientific = FALSE)) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {pepfar_pip$funding_agency} prevention cascade target achievment for {pepfar_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_prev_cascade_pepfar.png", plot = last_plot(), width = 19, height = 8.5)
+
+
+top2p <- top_filterp |> slice(11:20) |>  ungroup()  |>  select(country) 
+  
+pepfar_pip_prev |> ungroup() |> 
+  inner_join(top2p) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=genoa) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~country, ncol=5) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {pepfar_pip$funding_agency} prevention cascade target achievment for {pepfar_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_prev_cascade_pepfar2.png", plot = last_plot(), width = 19, height = 8.5)
+
+top3p <- top_filterp |> slice(21:30) |>  ungroup()  |>  select(country) 
+  
+  
+pepfar_pip_prev |> ungroup() |> 
+  inner_join(top3p) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=genoa) +
+  geom_text(aes(y=top_col, 
+                label = scales::percent(target_ach, accuracy=1)),
+            vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~country, ncol=5) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=16)) +
+  labs(title = str_glue("FY23Q2 {pepfar_pip$funding_agency} prevention cascade target achievment for {pepfar_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_prev_cascade_pepfar3.png", plot = last_plot(), width = 19, height = 8.5)
+
+
+
+```
+
+
+visualize trends
+```{r}
+# top <- 
+usaid_pip |> filter(indicator %in% ind_tx) |>  
+  group_by(fiscal_year, indicator, funding_agency, pop) |> 
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") |> 
+  mutate(indicator = fct_relevel(indicator, ind_tx),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  # geom_text(aes(y=top_col, 
+  #               label = scales::percent(target_ach, accuracy=1)),
+  #           vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~fiscal_year, nrow = 1) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=18, hjust=0.5)) +
+  labs(title = str_glue("FY23Q2 {usaid_pip$funding_agency} treatment cascade trehds for {usaid_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_tx_cascade_trends_usaid.png", plot = last_plot(), width = 19, height = 8.5)
+```
+```{r}
+# top <- 
+usaid_pip |> filter(indicator %in% ind_prev) |>  
+  group_by(fiscal_year, indicator, funding_agency, pop) |> 
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") |> 
+  mutate(indicator = fct_relevel(indicator, ind_prev),
+         top_col = if_else(cumulative >= targets, cumulative, targets),
+         target_ach = case_when(!(is.na(targets) | targets==0) ~ 
+                                  cumulative/targets)) |> 
+  ggplot(aes(x=indicator)) +
+  geom_col(aes(y=targets), fill=grey20k) +
+  geom_col(aes(y=cumulative), width =0.5, fill=scooter) +
+  # geom_text(aes(y=top_col, 
+  #               label = scales::percent(target_ach, accuracy=1)),
+  #           vjust=-0.75, size=5, color=grey80k) +
+  facet_wrap(~fiscal_year, nrow = 1) +
+  si_style_xyline() +
+  # ylim(0,2300) +
+  theme(plot.title = element_text(size = 18),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=14),
+        strip.text = element_text(face="bold", size=18, hjust=0.5)) +
+  labs(title = str_glue("FY23Q2 {usaid_pip$funding_agency} prevention cascade trehds for {usaid_pip$pop}"),
+       subtitle = "")
+
+ggsave(filename = "../Images/pip_prev_cascade_trends_usaid.png", plot = last_plot(), width = 19, height = 8.5)
+```
+

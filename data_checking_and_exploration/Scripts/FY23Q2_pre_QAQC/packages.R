@@ -5,6 +5,7 @@ library(grabr)
 library(scales)
 library(gt)
 library(ggtext)
+library(htmltools)
 
 load_secrets()
 

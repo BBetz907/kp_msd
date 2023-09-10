@@ -1,0 +1,292 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## modality 
+
+```{r}
+modality_annual_usaid <- modality %>%
+        rename(partner = prime_partner_name) %>%
+        mutate(fy = str_c("FY", str_extract(as.character(fy), ".{2}$")),
+               country = recode(country,
+                            "Democratic Republic of the Congo" = "DRC",
+                            "Papua New Guinea" = "PNG"),
+               modality_group = case_when(
+                 str_detect(modality, "Index") ~ "Index",
+                 str_detect(modality, "SNS") ~ "SNS", 
+                 # str_detect(modality, "TB") ~ "TB", 
+                 # str_detect(modality, "PITC") ~ "PITC", 
+                 # modality == "VCT" ~ "VCT",
+                 TRUE ~ "Other"),
+               # modality_group = if_else(modality_group == "Other" & str_detect(modality, "Mod"), "Community", modality_group)
+               ) %>%     
+    filter(funding_agency == "USAID",
+           str_detect(indicator, "HTS"),
+           age == "15+",
+           # mech_code != "17422"
+           ) %>% 
+    # semi_join(sns_mechs) %>% #filter by mechanisms who report SNS
+    group_by(across(operatingunit:fy), modality_group) %>% 
+    summarize(results = sum(results), .groups = "drop") %>%
+  filter(operatingunit=="Asia Region") |> 
+    glimpse()
+
+
+
+```
+
+
+```{r}
+
+modality_group_list <- c("SNS", "Index", "VCT", "Community", "TB")
+testing_focus_list <- c("KP-focused (>75% KP)", 
+                        "Integrated (25-75% KP)", 
+                        "Integrated (<25% KP)") #define order  
+
+```
+
+```{r}
+usaid_modalities_kpfocus <- read_csv(file = "Data/kp_focused_testing_fy21-23_by_mechcode_country.csv", 
+                    col_types = cols(.default = "c")) %>% 
+    clean_names() %>% select(-mechanism_id_country) %>% 
+    rename("mech_code" = "mechanism_id",
+           "testing_focus" = "kp_vs_integrated_testing") %>% 
+    mutate(testing_focus = str_remove(testing_focus, "[T,t]esting\\s")) %>%
+    right_join(modality_annual_usaid, by=c("mech_code", "country")) %>%
+    mutate(
+           modality_group = factor(modality_group, levels = rev(modality_group_list)),
+           testing_focus = if_else(is.na(testing_focus), "Integrated (<25% KP)", testing_focus), 
+                #recode missing as integrated, <25%KP
+           testing_focus = factor(testing_focus, levels = (testing_focus_list)),
+                #recode as factor for sorting
+           age = "15+") |> glimpse()
+
+#summarize to global level, by indicator, FY, modality, and testing_focus
+usaid_modalities_kpfocus_global <- usaid_modalities_kpfocus %>%   
+  # filter(!country=="Zambia") %>% #TEST to see what happens if Zambia is removed
+  group_by(fy, indicator, modality_group, age, funding_agency, operatingunit, country, 
+           # testing_focus
+           ) %>% 
+  summarise(results = sum(results), .groups = "drop") %>% glimpse()
+```
+```{r}
+usaid_modalities_kpfocus_global |> count(age)
+```
+```{r}
+usaid_modalities_kpfocus_global_with_totals <- usaid_modalities_kpfocus_global %>%
+  group_by(fy, indicator, country) %>% 
+  summarise(totals = sum(results), .groups = "drop") %>% 
+  right_join(usaid_modalities_kpfocus_global, by=c("fy", "indicator", "country"), 
+             # multiple = "any"
+             ) %>%
+  mutate(modality_proportion = round(results/totals,3),
+         modality_percent = case_when(
+                                      modality_proportion < .095 & (modality_group == "SNS" | modality_group =="Index") ~  scales::percent(modality_proportion, accuracy = 0.1),
+                                      modality_proportion >= .095 & (modality_group == "SNS" | modality_group =="Index") ~  scales::percent(modality_proportion, accuracy = 1),
+                                    .default = "")) %>%
+  glimpse()
+```
+Percent
+```{r}
+tst_and_pos <- usaid_modalities_kpfocus_global_with_totals %>% filter(indicator=="HTS_TST_POS" | indicator=="HTS_TST",
+                                                                  modality_group == "SNS",
+                                                                  fy != "FY24") %>%
+  mutate(
+  # modality_percent = 
+  #          # if_else(testing_focus == "KP-focused (>75% KP)" & modality_group %in% c("SNS", "Index") |
+  #                  # modality_group == "SNS" & testing_focus != "Integrated (<25% KP)", 
+  #                scales::percent(results/totals, accuracy = 1), 
+         country = fct_reorder(country, desc(results/totals))
+         # "")
+)
+```
+
+```{r}
+tst_and_pos %>% 
+  ggplot(mapping = aes(x=indicator, y=modality_proportion, fill = fy)) +
+  geom_col(position = "dodge2") + 
+  guides(fill = guide_legend(
+    reverse = TRUE
+  )) +   # reverses color fill legend order, for horizontal view
+  scale_fill_manual(values=c(grey60k, grey30k)) +
+  geom_text(aes(y =modality_proportion+0.05, label=modality_percent),
+            position = position_dodge2(width = 1),
+            fontface = "bold", color=grey40k) +
+  facet_grid(cols = vars(fy, country), 
+             # switch = "y", #move right to left
+             labeller = label_wrap_gen(width = 12, multi_line = TRUE)
+             ) +
+  si_style_ygrid()  +
+  theme(axis.text.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        strip.text.x = element_text(size =14, hjust = 0.5, vjust=1.1, face="bold",colour = grey90k), # facet label position
+        strip.text.y.right = element_text(size =14, angle = 0, face="bold",colour = grey90k),
+        # axis.title.y = element_text(margin = 1),
+        legend.direction = "horizontal",
+        legend.position = c(x=.85, y=.425),
+        legend.justification = "center",
+        legend.title = element_blank(),
+        legend.background = element_rect(fill="white", color = "white"),
+        plot.title = element_markdown(hjust = 0, size =24),
+        plot.subtitle = element_text(hjust = 0))+
+  scale_y_continuous(labels = label_number(suffix = "%", scale = 1e2),
+                     # breaks = c(200000, 400000, 600000, 800000, 1000000),
+                     limits = c(0, 1),
+                     expand = c(0,0))  #removes space between axes and bars
+  # labs(title = glue::glue("<span style = 'color:#1e87a5;'>SNS</span> are an important alternative to <span style = 'color:#a7a9ac;'>Index</span> testing<br>for Key Populations, despite lower positivity"),
+  #      subtitle = glue::glue("\nProportion of {tst_and_pos$indicator[1]} and {tst_and_pos$indicator[2]} from selected modalities, {tst$funding_agency}, ages {tst$age}\n"),
+  #      y = glue::glue("Proportion of tests"),
+  #      x = "",
+  #      caption = glue::glue("Data source: {file_name}")
+  # )
+
+ggsave(filename = "../../Images/ARP Q3/testing_and_pos_kp_focus_modality_trends_percents.png", plot = last_plot(), width = 16, height = 8)
+
+```
+
+Heat map or tree maps are likely necessary, since magnitude varies so greatly.
+
+
+```{r}
+tst_and_pos %>% 
+  mutate(country=fct_reorder(country, desc(modality_proportion))) |> 
+  pivot_wider(names_from = fy, values_from = c(totals, results:modality_percent), names_glue = "{fy}_{.value}" ) |> 
+  mutate(sns_change = case_when(
+          FY23_results >= 0.80*FY22_results ~ "growing SNS",
+          FY23_results >= 0.70*FY22_results &  FY23_results < 0.80*FY22_results ~ "maintaining SNS",
+          .default =  "declining SNS")) |> 
+  pivot_longer(
+    cols = starts_with("FY"),
+    names_to = c("fy", ".value"),
+    names_pattern = "FY(\\d{2})_(.*)$",
+    values_to = c("totals", "results", "modality_proportion", "modality_percent")
+  ) |> mutate(fy = str_c("FY", fy),
+              sns_change_by_indicator = case_when(fy=="FY23" & sns_change == "growing SNS" ~ sns_change,
+                                                   .default = indicator)) |> 
+  ggplot(mapping = aes(x=fy, y=results, fill = sns_change_by_indicator)) +
+  # geom_bar(aes(y=results, fill = pop), stat = "identity",  position = "dodge2") +
+  geom_col(
+    # position = "dodge2"
+    ) + 
+  guides(fill = guide_legend(
+    reverse = TRUE
+  )) +   # reverses color fill legend order, for horizontal view
+  scale_fill_manual(values=c(genoa, grey50k, grey20k)) +
+  geom_text(aes(y =results, label=modality_percent),
+            # position = position_nudge(y=1),
+            # position = position_dodge2(width = 1),
+            vjust = -0.3,
+            fontface = "bold", color=grey40k) +
+  facet_grid(cols = vars(country), rows=vars(indicator), scales = "free_y",
+             # switch = "y", #move right to left
+             labeller = label_wrap_gen(width = 12, multi_line = TRUE)
+             ) +
+  # annotate("rect", xmin = 1, xmax = 4, ymin = 1, ymax = 4, alpha = .2, color = genoa_light) +
+  # si_style_yline()   +
+  theme(
+        axis.title = element_blank(),
+        axis.text.x = element_text(size = 12),
+        panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.background = element_blank(),
+          # element_rect(linewidth = 0.2, fill="white"),
+        strip.text.x = element_text(size =14, hjust = 0.5, vjust=1.1, face="bold",colour = grey90k), # facet label position
+        strip.text.y.right = element_text(size =14, angle = 0, face="bold",colour = grey90k),
+        strip.background = element_blank(),
+        # axis.title.y = element_text(margin = 1),
+        legend.direction = "horizontal",
+        legend.position = c(x=.8, y=.275),
+        legend.justification = "center",
+        legend.title = element_blank(),
+        legend.background = element_rect(fill="white", color = "white"),
+        plot.title = element_markdown(hjust = 0, size =24),
+        plot.subtitle = element_text(hjust = 0),
+      plot.caption = element_markdown(size=11, margin = margin(t=20))) +
+  labs(caption = str_glue("Data source: {file_name}"))
+  # scale_y_continuous(expand = c(0,0))
+# + 
+  # scale_y_continuous(labels = label_number(suffix = "%", scale = 1e2),
+                     # breaks = c(200000, 400000, 600000, 800000, 1000000),
+                     # limits = c(0, 1),
+                     # expand = c(0,0))  #removes space between axes and bars
+  # labs(title = glue::glue("<span style = 'color:#1e87a5;'>SNS</span> are an important alternative to <span style = 'color:#a7a9ac;'>Index</span> testing<br>for Key Populations, despite lower positivity"),
+  #      subtitle = glue::glue("\nProportion of {tst_and_pos$indicator[1]} and {tst_and_pos$indicator[2]} from selected modalities, {tst$funding_agency}, ages {tst$age}\n"),
+  #      y = glue::glue("Proportion of tests"),
+  #      x = "",
+  #      caption = glue::glue("Data source: {file_name}")
+  # )
+
+ggsave(filename = "../../Images/ARP Q3/testing_and_pos_kp_focus_modality_trends_results.png", plot = last_plot(), width = 16, height = 7)
+
+```
+
+
+```{r}
+arp <- check |> 
+  filter(funding_agency == "USAID",
+         operatingunit == "Asia Region",
+         keypop != "Prisoners",
+         fy %in% c(2023),
+         disagg=="KP") |> 
+  group_by(fy, operatingunit, country, indicator, keypop) |> 
+  summarise(results = sum(cumulative), targets = sum(targets), .groups = "drop") |> 
+  mutate(achievement = results/targets)
+
+write_csv(arp, "../../Dataout/ARP Q3/asia_ach_by_country_keypop.csv")
+
+arp |> filter(indicator=="HTS_TST",
+              country %in% c("Burma", "Indonesia", "Nepal", "Philippines", "Thailand")) |> 
+  mutate(keypop = fct_reorder(keypop, desc(results)),
+         ach_color_count = case_when(
+           results/targets > 0.65 ~ "blue",
+           .default = "grey"
+         )) |> 
+  ggplot(aes(y=results, x=fy)) +
+  geom_col(aes(fill=ach_color_count))  +
+  scale_fill_manual(values=c(denim, grey20k)) +
+  geom_text(aes(y =results, label=scales::percent(results/targets, accuracy = 1)),
+            # position = position_nudge(y=1),
+            # position = position_dodge2(width = 1),
+            vjust = -0.3,
+            fontface = "bold", color=grey40k) +
+  facet_grid(cols = vars(country), 
+             rows = vars(keypop),
+             # switch = "y", #move right to left
+             labeller = label_wrap_gen(width = 12, multi_line = TRUE),
+             scales = "free_y"
+             )  +
+  scale_x_continuous(breaks = seq(2022, 2023, by = 1)) +
+  si_style_xline() +
+  theme(
+        axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        # axis.text.x = element_text(size = 10, angle = 90),
+        panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.background = element_blank(),
+          # element_rect(linewidth = 0.2, fill="white"),
+        strip.text.x = element_text(size =13, hjust = 0.5, vjust=1.1, face="bold",colour = grey90k), # facet label position
+        strip.text.y.right = element_text(size =14, angle = 0, face="bold",colour = grey90k),
+        strip.background = element_blank(),
+        # axis.title.y = element_text(margin = 1),
+        legend.direction = "horizontal",
+        legend.position = c(x=.8, y=.275),
+        legend.justification = "center",
+        legend.title = element_blank(),
+        legend.background = element_rect(fill="white", color = "white"),
+        plot.title = element_markdown(hjust = 0, size =24),
+        plot.subtitle = element_text(hjust = 0),
+      plot.caption = element_markdown(size=11, margin = margin(t=20))) +
+  labs(caption = str_glue("Data source: {file_name}"))
+
+ggsave(filename = "../../Images/ARP Q3/testing_by_country_keypop.png", plot = last_plot(), width = 16, height = 7)
+
+
+```

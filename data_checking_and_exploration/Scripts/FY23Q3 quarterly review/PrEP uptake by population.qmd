@@ -1,0 +1,537 @@
+---
+title: "PrEP uptake by population"
+author: "Bourke Betz"
+format: html
+editor: visual
+---
+
+Identify the name of the latest PSNU x IM MER Structured Data Set
+
+```{r}
+theme_clean_axis_legends <-  theme(axis.title = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank())
+
+```
+
+```{r}
+
+ayp <- c("15-19", "20-24", "25-29")
+ind <- c("PrEP_NEW", "PrEP_CT")
+
+prep_trends_pre <- qcheck |> 
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         funding_agency == "USAID",
+         !(country=="Uganda" & !is.na(keypop))) |> 
+  mutate(pop = case_when(
+    !is.na(keypop) ~ keypop,
+    disagg == "PregnantOrBreastfeeding" ~ otherdisaggregate,
+    sex == "Female" & ageasentered %in% ayp ~ "AGYW",
+    sex == "Male" & ageasentered %in% ayp ~ "ABYM",
+    standardizeddisaggregate == "Total Numerator" ~ "Total"
+    )) |> 
+  filter(
+    # !is.na(pop),
+    fy != 2024,
+    fyq != "FY23 Q4"
+         ) |> 
+  group_by(indicator, pop, fy, qtr, fyq) |> 
+  summarise(results=sum(results), .groups = "drop")
+
+prep_pop_trends <- prep_trends_pre |> filter(pop!="Total")
+  
+prep_trends <- prep_trends_pre |> filter(pop=="Total") |>  rename(total = results) |> select(-pop) |> 
+  right_join(prep_pop_trends, multiple = "all", ) |> 
+  mutate(pop = fct_relevel(pop,
+    "AGYW", "FSW", "MSM", "ABYM"),
+    population = recode(pop,
+                        "AGYW" = "Adolescent girls & young women (15-29)",
+                        "FSW"  = "Female sex workers",
+                        "MSM"  = "Men who have sex with men",
+                        "ABYM" = "Adolescent boys & young men (15-29)",
+                        "TG" = "Transgender",
+                        "PWID" = "People who inject drugs"
+                        ),
+  indicator1 = "PrEP initiations",
+  indicator2 = "PrEP continuations") |>
+  #label value for max and series start/end
+  group_by(pop, indicator) |> 
+  mutate(percent_of_total_series_ends = case_when(
+          fy == min(fy) & qtr == "Q1" ~ scales::percent(results/total, accuracy = 1),
+          fy == max(fy) & qtr == "Q3" ~ scales::percent(results/total, accuracy = 1),
+          # results/total == max(results/total) ~ scales::percent(results/total, accuracy = 1),
+          )) |> 
+  ungroup() |> arrange(indicator, pop, fyq)
+
+rm(prep_trends_pre, prep_pop_trends)
+
+
+```
+
+### PrEP_NEW trends - by large priority pop
+```{r, fig.retina=2}
+akp <- c("#33adbb", "#005e7a", "#f28965", "#b85534")
+agyw_last2_color <- c(grey60k, "#33adbb", grey30k)
+
+prep_trends_smallx <- prep_trends |> filter(indicator == ind[1],
+                          !pop %in% c("Pregnant", "Breastfeeding", "TG", "PWID", "Prisoners")) |> 
+  mutate(agyw_last2 = case_when(pop=="AGYW" & fyq %in% c("FY23 Q2", "FY23 Q3") ~ "focus",
+                                pop!="AGYW" & fyq %in% c("FY23 Q2", "FY23 Q3") ~ "attention",
+                                .default = "norm")) |> group_by(pop, agyw_last2) |> 
+  ggplot(aes(x=fyq)) +
+  # geom_bar(aes(y=total), alpha = 0.4, fill = "grey", stat = "summary", fun = "mean") +
+  geom_bar(aes(y=results, fill = agyw_last2), stat = "identity",  position = "dodge2") +
+  facet_wrap(~population, nrow = 1, labeller = label_wrap_gen(width = 20)) +
+  geom_text(aes(y=results+5000, label=percent_of_total_series_ends,  color = agyw_last2), position = position_dodge2(width = 1), fontface="bold", size=4) +
+  # geom_text(aes(y=results+20000, color = pop, label=percent_of_total,   position = position_dodge2(width = 1)) +
+  scale_fill_manual(values=agyw_last2_color) +
+  scale_color_manual(values=agyw_last2_color) +
+  scale_y_continuous(labels = comma, breaks = c(25000, 50000, 75000, 100000, 125000, 150000),  limits = c(0, 160000), expand = c(0, 0)) +
+  # scale_color_discrete(akp) +
+  si_style_ygrid() +
+  theme(
+      #format axes
+        axis.title = element_blank(),
+        axis.text.x.bottom = element_text(angle=90, vjust = 0.3),
+        # panel.grid.minor.y = element_line(color = grey10k),
+        panel.grid.major.y = element_line(color = grey10k),
+      #format facet titles
+        strip.text.x.top = element_text(hjust = 0.5, vjust = 0, face = "bold", size = 16),
+      #format legends
+        legend.position = "none",
+        legend.title = element_blank(),
+      #format plot title
+        plot.title = element_markdown(face="bold", size = 36),
+        plot.subtitle = element_markdown(size=14),
+        plot.caption = element_markdown(size=11, margin = margin(t=20))
+
+      ) +
+  labs(
+    # title  = HTML(str_glue("PrEP initiations continue to increase, <span style='color: #33adbb;'>especially for AGYW")),
+    subtitle  = "USAID global PrEP_NEW trends and percent of total by population",
+    caption = str_glue("Data source: {file_name},  \nexcluding Uganda where KP disaggregate reporting was paused  \nNote: Populations may overlap (e.g. a 23yo FSW would also be in AGYW but a 34yo MSM would not be in ABYM)"),
+    color = "Population") 
+
+prep_trends_smallx
+
+ggsave(plot=prep_trends_smallx, filename = paste0("../../Images/OHA Q3/prep_trends_smallx.png"), width = 11.5, height = 7)
+```
+
+#### PrEP_NEW trends - small priority populations
+```{r}
+prep_trends_smallerx <- prep_trends |> filter(indicator == ind[1],
+                          pop %in% c("TG", "PWID", "Prisoners", "Pregnant", "Breastfeeding")) |> 
+  ggplot(aes(x=fyq)) +
+  geom_bar(aes(y=results), stat = "identity",  position = "dodge2") +
+  facet_wrap(~population, nrow = 1, labeller = label_wrap_gen(width = 20)) +
+    scale_y_continuous(labels = comma, 
+                     n.breaks = 5,
+                     minor_breaks = waiver(), limits = c(0, 5000), 
+                     expand = c(0, 0)) +
+  si_style_ygrid() +
+  theme(
+      #format axes
+        axis.title = element_blank(),
+        axis.text.x.bottom = element_text(angle=90, vjust = 0.3),
+        panel.grid.minor.y = element_line(color = grey10k),
+        panel.grid.major.y = element_line(color = grey10k),
+      #format facet titles
+        strip.text.x.top = element_text(hjust = 0.5, vjust = 0, face = "bold", size = 16),
+      #format legends
+        legend.position = "none",
+        legend.title = element_blank(),
+      #format plot title
+        plot.title = element_markdown(face="bold", size = 36),
+        plot.subtitle = element_markdown(size=14),
+        plot.caption = element_markdown(size=11, margin = margin(t=20))) +
+  labs(
+    subtitle  = "USAID Global PrEP_NEW result trends and percent of total by population, excluding KP results for Uganda where KP disaggregate reporting is paused",
+    ) 
+
+prep_trends_smallerx
+
+ggsave(plot=prep_trends_smallerx, filename = paste0("../../Images/OHA Q3/prep_trends_smallerx.png"), width = 16, height = 5)
+```
+
+### PrEP_NEW trends - total
+```{r}
+vert_adjust <- c(30000)
+
+prep_trends_total <- prep_trends |> filter(indicator == ind[1],
+                          !pop %in% c("Pregnant", "Breastfeeding")) |> 
+  ggplot(aes(x=fyq, group = indicator)) +
+  geom_line(aes(y=total), color = grey10k, stat = "summary", fun = "mean", size=1.5) +
+  # geom_bar(aes(y=total), alpha = 0.4, color = "grey", stat = "summary", fun = "mean") +
+  geom_text(aes(y=total+vert_adjust, label=comma(
+    case_when(qtr %in% c("Q1", "Q3")  ~ total)
+  )), stat = "summary", fun ="mean", size=4) +
+  geom_text(aes(y=total-vert_adjust, label=
+                      case_when(qtr %in% c("Q1", "Q3")  ~ fyq)),
+            color = grey40k, size=4) +
+  si_style_nolines() +
+  scale_y_continuous(labels = comma, 
+                     n.breaks = round(max(prep_trends$total)/150000),
+                     # breaks = c(50000, 150000, 250000), minor_breaks = waiver(), 
+                     limits = c(min(prep_trends$total)-vert_adjust, max(prep_trends$total)+vert_adjust)
+                     ) +
+  theme_clean_axis_legends +
+    theme(
+      axis.text = element_blank(),
+      # panel.grid.major.y = element_line(color = grey10k),
+        plot.subtitle = element_markdown(size=14),
+        plot.caption = element_markdown(size=11, margin = margin(t=0))
+      ) +
+  labs(
+    subtitle  = "USAID Global PrEP_NEW total result trends",
+    caption = str_glue("Data source: {file_name}"),
+
+  )
+
+prep_trends_total
+
+ggsave(plot=prep_trends_total, filename = paste0("../../Images/OHA Q3/prep_trends_total.png"), width = 16, height = 2.5)
+
+
+```
+
+
+
+
+### Prep_CT trends by large priority pop
+
+```{r, fig.retina=2}
+
+fsw_last2_color <- c(grey60k, "#005e7a", grey30k)
+
+
+prep_ct_trends_smallx <- prep_trends |> filter(indicator == ind[2],
+                          !pop %in% c("Pregnant", "Breastfeeding", "TG", "PWID", "Prisoners")) |> 
+  mutate(agyw_last2 = case_when(pop=="FSW" & fyq %in% c("FY23 Q2", "FY23 Q3") ~ "focus",
+                                pop!="FSW" & fyq %in% c("FY23 Q2", "FY23 Q3") ~ "attention",
+                                .default = "norm")) |> 
+  ggplot(aes(x=fyq)) +
+  geom_bar(aes(y=results, fill = agyw_last2), stat = "identity",  position = "dodge2") +
+  facet_wrap(~population, nrow = 1, labeller = label_wrap_gen(width=20)) +
+  geom_text(aes(y=results+5000, label=percent_of_total_series_ends,  color = agyw_last2), position = position_dodge2(width = 1), fontface="bold", size=4) +
+  # geom_text(aes(y=results+20000, color = pop, label=percent_of_total,   position = position_dodge2(width = 1)) +
+  scale_fill_manual(values=fsw_last2_color) +
+  scale_color_manual(values=fsw_last2_color) +
+  scale_y_continuous(labels = comma, breaks = c(25000, 50000, 75000, 100000, 125000), limits = c(0, 160000), expand = c(0, 0)) +
+  # scale_color_discrete(akp) +
+  si_style_ygrid() +
+  theme(
+      #format axes
+        axis.title = element_blank(),
+        axis.text.x.bottom = element_text(angle=90, vjust = 0.3),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_line(color = grey10k),
+      #format facet titles
+        strip.text.x.top = element_text(hjust = 0.5, vjust=0, face = "bold", size = 16),
+      #format legends
+        legend.position = "none",
+        legend.title = element_blank(),
+      #format plot title
+        plot.title = element_markdown(face="bold", size = 36),
+        plot.subtitle = element_markdown(size=14),
+        plot.caption = element_markdown(size=11, margin = margin(t=20))
+
+      ) +
+    labs(
+    # title  = HTML(str_glue("PrEP initiations continue to increase, <span style='color: #33adbb;'>especially for AGYW")),
+    subtitle  = "USAID global PrEP_CT trends and percent of total by population",
+    caption = str_glue("Data source: {file_name},  \nexcluding Uganda where KP disaggregate reporting was paused  \nNote: Populations may overlap (e.g. a 23yo FSW would also be in AGYW but a 34yo MSM would not be in ABYM)"),
+    color = "Population") 
+
+
+prep_ct_trends_smallx
+
+ggsave(plot=prep_ct_trends_smallx, filename = paste0("../../Images/OHA Q3/pre_ct_trends_smallx.png"), width = 11.5, height = 7)
+```
+
+
+#### PrEP_NEW trends - small priority populations
+```{r}
+prep_ct_trends_smallerx <- prep_trends |> filter(indicator == ind[2],
+                          pop %in% c("TG", "PWID", "Prisoners", "Pregnant", "Breastfeeding")) |> 
+  mutate(pop = fct_relevel(pop, "Pregnant", "Breastfeeding", "TG", "PWID", "Prisoners")) |> 
+  ggplot(aes(x=fyq)) +
+  geom_bar(aes(y=results), stat = "identity",  position = "dodge2") +
+  facet_wrap(~pop, nrow = 1, labeller = label_wrap_gen(width = 20)) +
+    scale_y_continuous(labels = comma, 
+                     n.breaks = 5,
+                     minor_breaks = waiver(), limits = c(0, 3400), 
+                     expand = c(0, 0)) +
+  si_style_ygrid() +
+  theme(
+      #format axes
+        axis.title = element_blank(),
+        axis.text.x.bottom = element_text(angle=90, vjust = 0.3),
+        panel.grid.minor.y = element_line(color = grey10k),
+        panel.grid.major.y = element_line(color = grey10k),
+      #format facet titles
+        strip.text.x.top = element_text(hjust = 0.5, vjust = 0, face = "bold", size = 16),
+      #format legends
+        legend.position = "none",
+        legend.title = element_blank(),
+      #format plot title
+        plot.title = element_markdown(face="bold", size = 36),
+        plot.subtitle = element_markdown(size=14),
+        plot.caption = element_markdown(size=11, margin = margin(t=20))) +
+  labs(
+    subtitle  = "USAID Global PrEP_CT result trends and percent of total by population, excluding KP results for Uganda where KP disaggregate reporting is paused",
+    ) 
+
+prep_ct_trends_smallerx
+
+ggsave(plot=prep_ct_trends_smallerx, filename = paste0("../../Images/OHA Q3/prep_ct_trends_smallerx.png"), width = 16, height = 5)
+```
+
+### PrEP_CT trends - total
+```{r}
+prep_ct_trends_total <- prep_trends |> filter(indicator == ind[2],
+                          !pop %in% c("Pregnant", "Breastfeeding")) |> 
+  ggplot(aes(x=fyq, group = indicator)) +
+  geom_line(aes(y=total), color = grey10k, stat = "summary", fun = "mean", size=1.5) +
+  # geom_bar(aes(y=total), alpha = 0.4, color = "grey", stat = "summary", fun = "mean") +
+  geom_text(aes(y=total+vert_adjust, label=comma(
+    case_when(qtr %in% c("Q1", "Q3")  ~ total)
+  )), stat = "summary", fun ="mean", size=4) +
+  geom_text(aes(y=total-vert_adjust, label=
+                      case_when(qtr %in% c("Q1", "Q3")  ~ fyq)),
+            color = grey40k, size=4) +
+  si_style_nolines() +
+  scale_y_continuous(labels = comma, 
+                     n.breaks = round(max(prep_trends$total)/150000),
+                     # breaks = c(50000, 150000, 250000), minor_breaks = waiver(), 
+                     limits = c(min(prep_trends$total)-vert_adjust, max(prep_trends$total)+vert_adjust)
+                     ) +
+  theme_clean_axis_legends +
+    theme(
+      axis.text = element_blank(),
+      # panel.grid.major.y = element_line(color = grey10k),
+        plot.subtitle = element_markdown(size=14),
+        plot.caption = element_markdown(size=11, margin = margin(t=0))
+      ) +
+  labs(
+    subtitle  = "USAID Global PrEP_CT total result trends",
+    caption = str_glue("Data source: {file_name}"),
+
+  )
+
+prep_ct_trends_total
+
+ggsave(plot=prep_ct_trends_total, filename = paste0("../../Images/OHA Q3/prep_ct_trends_total.png"), width = 16, height = 2.5)
+```
+
+#### PrEP_CT PBF
+which countries are reporting?
+```{r}
+
+prep_ct_trends_pbf <- prep_trends |> filter(indicator == ind[2],
+                          pop %in% c("Pregnant", "Breastfeeding")) |> 
+  mutate(pop = fct_relevel(pop, "Pregnant", "Breastfeeding")) |> 
+  ggplot(aes(x=fyq)) +
+  # geom_bar(aes(y=total), alpha = 0.4, fill = "grey", stat = "summary", fun = "mean") +
+  geom_bar(aes(y=results, 
+               # fill = pop
+               ), stat = "identity",  position = "dodge2") +
+  facet_wrap(~population, nrow = 1) +
+  # geom_text(aes(y=results+20000, color = pop, label=percent_of_total,   position = position_dodge2(width = 1)) +
+  # scale_fill_manual(values=akp) +
+  # scale_color_manual(values=akp) +
+  scale_y_continuous(labels = comma, 
+                     n.breaks = 5,
+                     minor_breaks = waiver(), limits = c(0, 7000), 
+                     expand = c(0, 0)) +
+  # scale_color_discrete(akp) +
+  si_style_ygrid() +
+  theme(
+      #format axes
+        axis.title = element_blank(),
+        axis.text.x.bottom = element_text(angle=90, vjust = 0.3),
+        panel.grid.minor.y = element_line(color = grey10k),
+        panel.grid.major.y = element_line(color = grey10k),
+      #format facet titles
+        strip.text.x.top = element_text(hjust = 0.5, face = "bold", size = 16),
+      #format legends
+        legend.position = "none",
+        legend.title = element_blank(),
+      #format plot title
+        plot.title = element_markdown(face="bold", size = 36),
+        plot.subtitle = element_markdown(size=14),
+        plot.caption = element_markdown(size=11, margin = margin(t=20))
+
+      ) +
+  labs(title  = HTML(str_glue("PrEP continuations continue to increase, <span style='color: #005e7a;'>especially for FSW")),
+    subtitle  = "PrEP_CT result trends and percent of total by population",
+    color = "Population") 
+
+prep_ct_trends_pbf
+
+ggsave(plot=prep_ct_trends_pbf, filename = paste0("../../Images/OHA Q3/prep_ct_trends_pbf.png"), width = 8, height = 6.5)
+```
+
+
+### PrEP_NEW  to PrEP_CT
+USAID tends to initiate more AYP on PrEP than continuations, the inverse of CDC, which does less volume but more continuations
+among KP there is more continuation than initiation across agencies
+```{r}
+prep_trends_fsw <- qcheck |> 
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT")) |> 
+  mutate(pop = case_when(
+    keypop %in% c("MSM", "FSW") ~ keypop,
+    disagg == "PregnantOrBreastfeeding" ~ otherdisaggregate,
+    sex == "Female" & ageasentered %in% ayp ~ "AGYW",
+    sex == "Male" & ageasentered %in% ayp ~ "ABYM",
+    standardizeddisaggregate == "Total Numerator" ~ "Total"
+    )) |> 
+  filter(
+         funding_agency %in% c("USAID", "CDC"),
+    fy == 2023,
+    !qtr %in% c("Q1", "Q4")) |> 
+  group_by(funding_agency, indicator, pop, qtr, fyq) |> 
+  summarise(results=sum(results), .groups = "drop") |> 
+  pivot_wider(names_from = indicator, values_from = results) |> 
+  mutate(ratio = PrEP_NEW/PrEP_CT) |> 
+  select(-qtr) |> 
+  arrange(pop, fyq, desc(funding_agency)) |> 
+  print()
+
+```
+
+#### FSW PrEP declines exploration
+```{r}
+prep_trends_fsw <- qcheck |> 
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         keypop == "FSW",
+         funding_agency == "USAID") |> 
+  mutate(pop = case_when(
+    keypop %in% c("MSM", "FSW") ~ keypop,
+    disagg == "PregnantOrBreastfeeding" ~ otherdisaggregate,
+    sex == "Female" & ageasentered %in% ayp ~ "AGYW",
+    sex == "Male" & ageasentered %in% ayp ~ "ABYM",
+    standardizeddisaggregate == "Total Numerator" ~ "Total"
+    )) |> 
+  filter(
+    !is.na(pop),
+    fy == 2023,
+    !qtr %in% c("Q1", "Q4")
+         ) |> 
+  group_by(country, indicator, pop, qtr) |> 
+  summarise(results=sum(results), .groups = "drop") |> 
+  pivot_wider(names_from = qtr, values_from = results) |> 
+  clean_names() |> 
+  mutate(drop = q2 > q3)
+
+prep_trends_fsw |> filter(country == "Uganda")
+```
+
+
+##### PrEP_NEW trends - by large priority pop (bars in bar)
+```{r}
+akp <- c("#33adbb", "#005e7a", "#f28965", "#b85534")
+
+prep_trends_barinbar <- prep_trends |> filter(indicator == ind[1],
+                                                  !is.na(pop),
+                          !pop %in% c("Pregnant", "Breastfeeding", "TG", "PWID", "Prisoners")) |> 
+  ggplot(aes(x=fyq)) +
+  geom_bar(aes(y=total), alpha = 0.4, fill = "grey", stat = "summary", fun = "mean") +
+  geom_bar(aes(y=results, fill = pop), stat = "identity",  position = "dodge2") +
+  geom_text(aes(y=results+20000, color = pop, label=scales::percent(results/total, 1)),   position = position_dodge2(width = 1)) +
+  scale_fill_discrete(akp) +
+  # scale_color_discrete(akp) +
+  si_style_yline() +
+  theme_clean_axis_legends +
+  labs(title  = HTML(str_glue("{prep_trends$indicator1}  continue to increase, especially for AGYW (females 15-29)")),
+    subtitle  = "PrEP_NEW totals and selected populations trends",
+    color = "Population") 
+
+# prep_trends_barinbar
+```
+
+
+
+#### PrEP expansion, country case-studies or 1+8+1
+Zambia from Sarah
+```{r}
+
+```
+
+### PrEP increases by country - success stories
+```{r}
+prep_trends_pop <- qcheck |> 
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         funding_agency == "USAID",
+         !(country=="Uganda" & !is.na(keypop))) |> 
+  mutate(pop = case_when(
+    keypop %in% c("MSM", "FSW") ~ keypop,
+    disagg == "PregnantOrBreastfeeding" ~ otherdisaggregate,
+    sex == "Female" & ageasentered %in% ayp ~ "AGYW",
+    sex == "Male" & ageasentered %in% ayp ~ "ABYM",
+    standardizeddisaggregate == "Total Numerator" ~ "Total"
+    )) |> 
+  filter(
+    !is.na(pop),
+    !(fy == 2022 & qtr %in% c("Q3", "Q2", "Q1")) &
+    !(fy == 2023 & qtr == "Q4") & fy != 2024
+         ) |> 
+  group_by(country, indicator, pop, fyq) |> 
+  summarise(results=sum(results), .groups = "drop") |> 
+  mutate(indicator = str_to_lower(indicator)) 
+
+
+prep_trends_combos <- prep_trends_pop |>
+  pivot_wider(names_from = c(indicator, fyq), values_from = results) |> 
+  clean_names() |> 
+  relocate(prep_ct_fy22_q4, .before = prep_ct_fy23_q1) |> 
+  filter(
+    (prep_new_fy23_q3 >= 2*prep_new_fy23_q1 |
+    prep_new_fy23_q3 >= 2*prep_new_fy22_q4) & prep_new_fy23_q3 >= 0.9* prep_new_fy23_q2
+    | (prep_ct_fy23_q3 >= 2*prep_ct_fy23_q1 |
+    prep_ct_fy23_q3 >= 2*prep_ct_fy22_q4) & prep_ct_fy23_q3 >= 0.9* prep_ct_fy23_q2
+    ) |> 
+  print()
+
+prep_pop_combos <- prep_trends_combos |> select(country, pop) |> print()
+
+
+prep_trends_meriting_exploration <- prep_trends_pop |> semi_join(prep_pop_combos)
+write_csv(prep_trends_meriting_exploration, "../../Dataout/OHA Q3/prep_trends.csv")
+
+prep_trends_meriting_exploration
+```
+
+Mozambique and Lesotho are the only possible stories for the USAID PBF numbers. We would need a compelling narrative
+```{r}
+prep_trends_pbf <- qcheck |> 
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         funding_agency == "USAID",
+         disagg == "PregnantOrBreastfeeding",
+         !(country=="Uganda" & !is.na(keypop))) |> 
+  mutate(pop = case_when(
+    keypop %in% c("MSM", "FSW") ~ keypop,
+    disagg == "PregnantOrBreastfeeding" ~ otherdisaggregate,
+    sex == "Female" & ageasentered %in% ayp ~ "AGYW",
+    sex == "Male" & ageasentered %in% ayp ~ "ABYM",
+    standardizeddisaggregate == "Total Numerator" ~ "Total"
+    )) |> 
+  filter(
+    !is.na(pop),
+    !(fy == 2022 & qtr %in% c("Q3", "Q2", "Q1")) &
+    !(fy == 2023 & qtr == "Q4") & fy != 2024
+         ) |> 
+  group_by(country, indicator, pop, fyq) |> 
+  summarise(results=sum(results), .groups = "drop") |> 
+  mutate(indicator = str_to_lower(indicator)) |>
+  pivot_wider(names_from = c(indicator, fyq), values_from = results) |> 
+  clean_names() |> 
+  relocate(prep_ct_fy22_q4, .before = prep_ct_fy23_q1) |> 
+  # filter(
+  #   (prep_new_fy23_q3 >= 2*prep_new_fy23_q1 |
+  #   prep_new_fy23_q3 >= 2*prep_new_fy22_q4) & prep_new_fy23_q3 >= 0.9* prep_new_fy23_q2
+  #   | (prep_ct_fy23_q3 >= 2*prep_ct_fy23_q1 |
+  #   prep_ct_fy23_q3 >= 2*prep_ct_fy22_q4) & prep_ct_fy23_q3 >= 0.9* prep_ct_fy23_q2
+  #   ) |> 
+  print()
+```
+

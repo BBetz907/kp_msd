@@ -1,0 +1,171 @@
+---
+title: "Young KP analysis"
+author: "Bourke Betz"
+date: 2023-06-21
+format: 
+  html:
+    toc: true
+    toc-depth: 6
+editor: visual
+execute: 
+  fig-width: 8
+  fig-asp: 0.618
+  fig-align: center
+  warning: FALSE
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(gagglr)
+library(scales)
+```
+
+##Load mechanisms with >75% KP enrolling in PrEP
+```{r}
+prep_mech <- read.csv("../Dataout/mech_by_kp_PrEP_NEW.csv") %>% filter(prop_kp_grp == "75% +") %>% 
+  mutate(mech_code = as.character(mech_code)) 
+
+tst_mech <- read.csv("../Dataout/mech_by_kp_HTS_TST.csv") %>% filter(prop_kp_grp == "75% +") %>% 
+  mutate(mech_code = as.character(mech_code)) 
+
+tx_new_mech <- read.csv("../Dataout/mech_by_kp_TX_NEW.csv") %>% filter(prop_kp_grp == "75% +") %>% 
+  mutate(mech_code = as.character(mech_code)) 
+
+tx_mech <- read.csv("../Dataout/mech_by_kp_TX_CURR.csv") %>% filter(prop_kp_grp == "75% +") %>% 
+  mutate(mech_code = as.character(mech_code))  
+
+```
+
+## Load MSD and filter and recode age/sex
+
+```{r}
+msd_name <- glamr::return_latest(folderpath =  "../Data/", pattern = "PSNU_IM_FY2")
+
+msd <- gophr::read_psd(msd_name, save_rds = FALSE, remove_txt = FALSE) %>% 
+         filter(indicator %in% c("KP_PREV", "HTS_TST", "HTS_TST_NEG", 
+                                 "HTS_TST_POS", "PrEP_NEW", "PrEP_CT", "TX_NEW", "TX_CURR", "TX_PVLS"),
+          str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
+         !ageasentered %in% c("<01", "01-04", "05-09","10-14", "Unknown Age")) %>% 
+  drop_na(ageasentered) %>%
+  mutate(age = case_when(ageasentered %in% c("15-19", "20-24") ~ "Young KP 15-24",
+                            ageasentered %in% c("25-29", "30-34") ~ "Young KP 25-34",
+                            TRUE ~ "Older KP 35+"),
+         age = fct_relevel(age, c("Young KP 15-24", "Young KP 25-34", "Older KP 35+"))) %>%
+  group_by(operatingunit, country, indicator, prime_partner_name, funding_agency, mech_code, mech_name,
+           numeratordenom, standardizeddisaggregate, age, modality, otherdisaggregate, fiscal_year) %>%
+  summarise(across(targets:cumulative, ~sum(.x, na.rm = TRUE)), .groups = "drop") 
+```
+
+
+## Filter MSD by mech lists for prevention, testing, linkage
+
+```{r}
+
+prev <-  msd %>% filter(indicator %in% c("KP_PREV", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT")) %>%
+      semi_join(prep_mech, by = c("country", "mech_code")) %>%
+      mutate(topic = "prevention")
+
+tst <-  msd %>% filter(indicator %in% c( "HTS_TST", "HTS_TST_POS")) %>%
+      semi_join(tst_mech, by = c("country", "mech_code")) %>%
+      mutate(topic = "testing")
+
+tx_new <-  msd %>% filter(indicator %in% c("HTS_TST_POS", "TX_NEW")) %>%
+      semi_join(tx_new_mech, by = c("country", "mech_code")) %>%
+      mutate(topic = "linkage")
+
+
+prev_tst_lnk <- bind_rows(prev, tst, tx_new) %>%
+  pivot_longer(cols = targets:cumulative, names_to = "results_or_targets") %>% glimpse()
+
+```
+## Filter MSD by mech lists for MMD and VL
+```{r}
+tx_lagged_2a <- msd %>% filter(indicator == "TX_CURR",
+                               fiscal_year < 2023,
+                               standardizeddisaggregate != "Age/Sex/ARVDispense/HIVStatus") %>%
+  semi_join(tx_mech, by = c("country", "mech_code")) %>%
+  select(-numeratordenom, -targets, -qtr1, -qtr3:-cumulative) %>%
+  rename(value = qtr2) %>%
+  mutate(indicator = "VL Coverage Denominator", 
+         topic = "VL") 
+  
+tx_lagged_2b <- msd %>% filter(indicator == "TX_CURR",
+                               fiscal_year == 2022,
+                               standardizeddisaggregate != "Age/Sex/ARVDispense/HIVStatus") %>%
+  semi_join(tx_mech, by = c("country", "mech_code")) %>%
+  select(-numeratordenom, -targets, -qtr1:-qtr4) %>%
+  rename(value = cumulative) %>%
+  mutate(indicator = "VL Coverage Denominator",
+         topic = "VL",
+         fiscal_year = 2023) 
+
+vl <-  msd %>% filter(indicator %in% c("TX_PVLS")) %>%
+      semi_join(tx_mech, by = c("country", "mech_code")) %>%
+      mutate(indicator = if_else(indicator=="TX_PVLS", str_c(indicator, numeratordenom, sep="_"), indicator),
+             topic = "VL") %>%
+      select(-numeratordenom, -targets, -qtr1:-qtr4) %>% 
+      rename(value = cumulative) 
+
+#add net new and new later
+
+tx_mmd_n <- msd %>% filter(indicator == "TX_CURR", 
+                     standardizeddisaggregate == "Age/Sex/ARVDispense/HIVStatus") %>%
+        semi_join(tx_mech, by = c("country", "mech_code")) %>%
+        mutate(indicator = "TX_CURR_MMD_STAT",
+               topic = "MMD") %>%
+        select(-numeratordenom, -targets, -qtr1:-qtr4) %>% 
+        rename(value = cumulative) 
+
+tx_mmd_d <- msd %>% filter(indicator == "TX_CURR", 
+                     standardizeddisaggregate != "Age/Sex/ARVDispense/HIVStatus") %>%
+        semi_join(tx_mech, by = c("country", "mech_code")) %>%
+        mutate(indicator = "TX_CURR_MMD_STAT_D",
+               topic = "MMD") %>%
+        select(-numeratordenom, -targets, -qtr1:-qtr4) %>% 
+        rename(value = cumulative) 
+
+
+tx_vl_mmd <- bind_rows(tx_lagged_2a, tx_lagged_2b, vl, tx_mmd_n, tx_mmd_n) %>%
+  mutate(results_or_targets = "cumulative")
+```
+
+## Filter MSD by mech lists for TX_CURR, NEW, NET_NEW
+TBD
+
+
+## Export for Tableau Analysis
+```{r}
+dataout <- "../Dataout/"
+style <- ".csv"
+
+young_kp <- bind_rows(tx_vl_mmd, prev_tst_lnk)
+
+write_csv(young_kp, file = str_glue("{dataout}young_kp{style}"))
+
+
+```
+
+
+
+
+
+## Analyze and visualize
+
+#Linkage
+```{r}
+linkage_viz <- tx_new %>% filter(fiscal_year==2023) %>% 
+  group_by(country, operatingunit, mech_code, mech_name, prime_partner_name, age, indicator, fiscal_year) %>%
+  summarise(results = sum(cumulative, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(names_from = indicator, values_from = results) %>% 
+  clean_names() %>%
+  mutate(linkage = round(tx_new/hts_tst_pos,2)) %>%
+  filter(linkage > 0.5, linkage < 1.25)
+
+linkage_viz %>% ggplot(aes(y=age, x=linkage)) + 
+  geom_boxplot(fill = grey10k, alpha = 0.5) +
+  geom_jitter(aes(group=interaction(country, mech_code)), color = grey60k) + 
+  si_style_xline()
+
+
+```

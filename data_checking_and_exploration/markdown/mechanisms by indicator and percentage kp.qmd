@@ -1,0 +1,286 @@
+---
+title: "mechanisms by indicator and percentage kp"
+author: "Bourke Betz"
+date: 2023-06-21
+format: 
+  html:
+    toc: true
+    toc-depth: 6
+editor: visual
+execute: 
+  fig-width: 8
+  fig-asp: 0.618
+  fig-align: center
+  warning: FALSE
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(gagglr)
+library(scales)
+```
+
+# Filter by indicator and transform 
+
+This program will read in a slightly simplified MSD and code mechanisms/country combos by % KP of total results. Then these will be exported for analysis using Purrr in R and Tableau, merging on mech_code. Naturally, the first steps Testing:PrEP could also be simplified using Purrr also once I acquire the requisite skills.
+
+## Read Data
+
+```{r}
+check <- readRDS(file = "../Dataout/check.rds")
+
+```
+
+## Create data sets 
+
+by indicator for USAID, FY23
+
+### Testing
+
+```{r}
+mech_by_kp_tst <- check %>% 
+  filter(indicator == "HTS_TST", fy == 2023, funding_agency == "USAID") %>% 
+  group_by(operatingunit, country, partner, mech_code, disagg, indicator) %>% 
+  summarise(results = sum(cumulative, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(names_from = disagg, values_from = results, values_fill = 0) %>%
+  clean_names() %>%
+  mutate(prop_kp = kp/total,
+         prop_kp_grp = case_when(
+                                  prop_kp >= 0.75 ~ "75% +",
+                                  prop_kp >= 0.5 & prop_kp < 0.75 ~ "50-74%",
+                                  prop_kp >= 0.25 & prop_kp < 0.5 ~ "25-49%",
+                                  prop_kp < 0.25 & prop_kp >0 ~ "<25%",
+                                  TRUE ~ "No KP"
+         )) %>%
+  filter(!prop_kp == 0)
+
+mech_by_kp_tst %>% count(prop_kp_grp)
+```
+
+#### Boxplot
+
+```{r}
+mech_by_kp_tst %>% 
+  ggplot(aes(x=prop_kp)) + 
+  geom_boxplot(fill = grey10k, alpha =0.5) +
+  geom_jitter(aes(y=0,group=mech_code, color = prop_kp_grp)) +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()
+        ) +
+  labs(title = glue::glue("{mech_by_kp_tst$indicator} distribution by % KP of total"))
+```
+
+#### Histogram
+
+```{r}
+mech_by_kp_tst %>%   ggplot(aes(x=prop_kp, fill = prop_kp_grp)) + 
+  geom_histogram() +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y= element_blank()
+          ) +
+  labs(title = glue::glue("{mech_by_kp_tst$indicator} distribution by % KP of total"))
+```
+
+### Treatment Initiation
+
+```{r}
+mech_by_kp_tx_new <- check %>% 
+  filter(indicator == "TX_NEW", fy == 2023, funding_agency == "USAID") %>% 
+  group_by(operatingunit, country, partner, mech_code, disagg, indicator) %>% 
+  summarise(results = sum(cumulative, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(names_from = disagg, values_from = results, values_fill = 0) %>%
+  clean_names() %>%
+  mutate(prop_kp = kp/total,
+         prop_kp_grp = case_when(
+                                  prop_kp >= 0.75 ~ "75% +",
+                                  prop_kp >= 0.5 & prop_kp < 0.75 ~ "50-74%",
+                                  prop_kp >= 0.25 & prop_kp < 0.5 ~ "25-49%",
+                                  prop_kp < 0.25 & prop_kp >0 ~ "<25%",
+                                  TRUE ~ "No KP"
+         )) %>%
+  filter(!prop_kp == 0)
+
+mech_by_kp_tx %>% count(prop_kp_grp)
+
+```
+
+#### Boxplot
+
+```{r}
+mech_by_kp_tx_new %>% 
+  ggplot(aes(x=prop_kp)) + 
+  geom_boxplot(fill = grey10k, alpha =0.5) +
+  geom_jitter(aes(y=0,group=mech_code, color = prop_kp_grp)) +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()
+  ) +
+  labs(title = glue::glue("{mech_by_kp_tx_new$indicator} distribution by % KP of total"))
+```
+
+#### Histogram
+
+```{r}
+mech_by_kp_tx_new %>%   ggplot(aes(x=prop_kp, fill = prop_kp_grp)) + geom_histogram() +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y= element_blank()
+    ) +
+  labs(title = glue::glue("{mech_by_kp_tx_new$indicator} distribution by % KP of total"))
+```
+
+### Treatment
+
+```{r}
+mech_by_kp_tx <- check %>% 
+  filter(indicator == "TX_CURR", fy == 2023, funding_agency == "USAID") %>% 
+  group_by(operatingunit, country, partner, mech_code, disagg, indicator) %>% 
+  summarise(results = sum(cumulative, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(names_from = disagg, values_from = results, values_fill = 0) %>%
+  clean_names() %>%
+  mutate(prop_kp = kp/total,
+         prop_kp_grp = case_when(
+                                  prop_kp >= 0.75 ~ "75% +",
+                                  prop_kp >= 0.5 & prop_kp < 0.75 ~ "50-74%",
+                                  prop_kp >= 0.25 & prop_kp < 0.5 ~ "25-49%",
+                                  prop_kp < 0.25 & prop_kp >0 ~ "<25%",
+                                  TRUE ~ "No KP"
+         )) %>%
+  filter(!prop_kp == 0)
+
+mech_by_kp_tx %>% count(prop_kp_grp)
+
+```
+
+#### Boxplot
+
+```{r}
+mech_by_kp_tx %>% 
+  ggplot(aes(x=prop_kp)) + 
+  geom_boxplot(fill = grey10k, alpha =0.5) +
+  geom_jitter(aes(y=0,group=mech_code, color = prop_kp_grp)) +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()
+  ) +
+  labs(title = glue::glue("{mech_by_kp_tx$indicator} distribution by % KP of total"))
+```
+
+#### Histogram
+
+```{r}
+mech_by_kp_tx %>%   ggplot(aes(x=prop_kp, fill = prop_kp_grp)) + geom_histogram() +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y= element_blank()
+    ) +
+  labs(title = glue::glue("{mech_by_kp_tx$indicator} distribution by % KP of total"))
+```
+
+### PrEP
+
+```{r}
+mech_by_kp_prep <- check %>% 
+  filter(indicator == "PrEP_NEW", fy == 2023, funding_agency == "USAID") %>% 
+  group_by(operatingunit, country, partner, mech_code, disagg, indicator) %>% 
+  summarise(results = sum(cumulative, na.rm = TRUE), .groups = "drop") %>% 
+  pivot_wider(names_from = disagg, values_from = results, values_fill = 0) %>%
+  clean_names() %>%
+  mutate(prop_kp = kp/total,
+         prop_kp_grp = case_when(
+                                  prop_kp >= 0.75 ~ "75% +",
+                                  prop_kp >= 0.5 & prop_kp < 0.75 ~ "50-74%",
+                                  prop_kp >= 0.25 & prop_kp < 0.5 ~ "25-49%",
+                                  prop_kp < 0.25 & prop_kp >0 ~ "<25%",
+                                  TRUE ~ "No KP"
+         )) %>%
+  # filter(!prop_kp == 0) %>%
+  glimpse()
+
+mech_by_kp_prep %>% count(prop_kp_grp)
+
+
+```
+
+#### Boxplot
+
+```{r}
+mech_by_kp_prep %>% 
+  ggplot(aes(x=prop_kp)) + 
+  geom_boxplot(fill = grey10k, alpha =0.5) +
+  geom_jitter(aes(y=0,group=mech_code, color = prop_kp_grp)) +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()
+  ) +
+  labs(title = glue::glue("{mech_by_kp_prep$indicator} distribution by % KP of total"))
+```
+
+#### Histogram
+
+```{r}
+mech_by_kp_prep %>%   ggplot(aes(x=prop_kp, fill = prop_kp_grp)) + geom_histogram() +
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y= element_blank()
+    ) +
+  labs(title = glue::glue("{mech_by_kp_prep$indicator} distribution by % KP of total"))
+```
+
+## Export data 
+
+Send to separate files to merge with MSD for analysis
+
+```{r}
+#| echo: false
+
+
+dataout <- "../Dataout/"
+
+export <- mech_by_kp_tst %>% 
+  bind_rows(mech_by_kp_tx_new, mech_by_kp_tx, mech_by_kp_prep) %>%
+  select(indicator, country, mech_code, prop_kp, prop_kp_grp)
+
+by_export <- export %>% 
+  dplyr::group_nest(indicator)
+
+by_export <- by_export %>% 
+  mutate(path = str_glue("{dataout}mech_by_kp_{indicator}.csv"))
+
+walk2(by_export$data, by_export$path, write_csv)
+
+```
+
+```{r}
+#| echo: false
+
+list.files(path =  str_glue("{dataout}"), pattern = "mech_by_kp",)
+```
+
