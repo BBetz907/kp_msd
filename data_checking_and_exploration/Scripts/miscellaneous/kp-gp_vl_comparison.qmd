@@ -4,8 +4,6 @@ format: html
 editor: visual
 ---
 
-
-
 Data prep: GP-KP
 
 ```{r}

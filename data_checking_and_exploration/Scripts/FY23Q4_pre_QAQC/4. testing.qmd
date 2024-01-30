@@ -1,0 +1,147 @@
+---
+title: "7ab"
+format: html
+editor: visual
+---
+
+```{r}
+country3 <- "Ethiopia"
+country4 <- "Vietnam"
+country5 <- "Uganda"
+
+```
+
+## 4a-c 
+
+clean
+
+```{r}
+country3 <- "Nigeria"
+country4 <- "Vietnam"
+country5 <- "Burundi"
+
+# modality %>%
+#   filter(country== country3,indicator %in% c("HTS_TST_POS", "HTS_TST"),
+#          str_detect(modality,"SNS"), 
+#          fy==2023) %>%
+#   select(country, indicator, modality, fyq, results) %>%
+#   group_by(country, indicator, modality, fyq) %>% 
+#   summarise(results = sum(results), .groups = 'drop') %>%
+#   pivot_wider(names_from = indicator, values_from = results) %>%
+#   mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+#   print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country4,
+        disagg == "KP",
+         fy==2023) %>%
+  select(country, indicator, funding_agency, fyq, results) %>%
+  group_by(country, indicator, funding_agency, fyq) %>% 
+  summarise(results = sum(results), .groups = 'drop') %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country5,
+         fy==2023) %>%
+  select(country, indicator, keypop, fyq, results) %>%
+  group_by(country, indicator, keypop, fyq) %>% 
+  summarise(results = sum(results), .groups = 'drop') %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+```
+
+4de = clean
+
+```{r}
+#| echo: false
+current_fy <- 2023
+current_fyq <- "FY23 Q4"
+
+# modality %>%
+#   filter(country== country4,
+#         fy == current_fy       ,
+#          indicator %in% c("HTS_TST_POS", "HTS_TST"),
+#      ) %>%
+#   select(country, indicator, modality, results) %>%
+#   group_by(country, indicator, modality) %>% 
+#   summarise(results = sum(results), .groups="drop") %>%
+#   pivot_wider(names_from = indicator, values_from = results) %>%
+#   mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+#          positivity_frac = HTS_TST_POS/HTS_TST) %>%
+#   arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+#   print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country5,
+        fy == current_fy  ,     
+        disagg == "KP") %>%
+  select(country, indicator, funding_agency, results) %>%
+  group_by(country, indicator, funding_agency) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country3,
+        fy == current_fy       
+     ) %>%
+  select(country, indicator, keypop, results) %>%
+  group_by(country, indicator, keypop) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country4,
+        fy == current_fy ,      
+        disagg == "KP") %>%
+  select(country, indicator, snu1, results) %>%
+  group_by(country, indicator, snu1) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country== country4,
+        fy == current_fy,      
+        disagg == "KP") %>%
+  group_by(country, indicator, keypop, fyq) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+# qcheck %>%
+#   filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+#         country== country5,
+#         fy == current_fy      , 
+#         disagg == "KP") %>%
+#   select(country, indicator, psnu, results) %>%
+#   group_by(country, indicator, psnu) %>% 
+#   summarise(results = sum(results), .groups = "drop") %>%
+#   pivot_wider(names_from = indicator, values_from = results) %>%
+#   mutate(positivity = percent(HTS_TST_POS/HTS_TST, accuracy = 1),
+#          positivity_frac = HTS_TST_POS/HTS_TST) %>%
+#   arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+#   print()
+```

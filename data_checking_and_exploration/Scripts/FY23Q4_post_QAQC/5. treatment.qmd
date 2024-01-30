@@ -1,0 +1,151 @@
+---
+title: "2abf"
+format: html
+editor: visual
+---
+
+5a -[linkage trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_aTestingandLinkageTrends/40426f3a-6e0b-4ada-897c-dfe5461884db/17a3ec3f-a566-49cb-add4-e53293d0ba54?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+library(glue)
+country1 <- "Cote d'Ivoire"
+country2 <- "Cameroon"
+
+linkage1 <- qcheck %>%
+  filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
+         disagg == "KP",
+         country== country1) %>%
+  group_by(country, indicator, disagg, fyq) %>%
+  summarise(results = sum(results), .groups = "drop") 
+
+linkage1 %>%  
+  ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + 
+  geom_line() + 
+  geom_text(position = position_nudge(y=30), aes(label = results)) +
+  scale_color_manual(values = c(HTS_TST_POS = "#808080", TX_NEW = "#1e87a5")) +
+  si_style_nolines() + 
+  labs(title = glue::glue("PEPFAR {country1} {linkage1$disagg} trends"))
+
+linkage2 <- qcheck %>%
+  filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
+         disagg == "KP",
+         keypop == "FSW",
+         country== country2) %>%
+  group_by(country, indicator, keypop, fyq) %>%
+  summarise(results = sum(results)) 
+
+linkage2 %>%  ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + geom_line() + geom_text(position = position_nudge(y=30), aes(label = results)) +
+  scale_color_manual(values = c(HTS_TST_POS = "#808080", TX_NEW = "#1e87a5")) + si_style_nolines() + labs(title = glue("PEPFAR {country2} {linkage2$keypop} trends"))
+
+```
+
+5b - [TX trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_bTXTrends/cec16239-2ef8-43d9-ad2e-c6f04068e95b/6571f6c6-2393-4c5f-a7dd-718a22cf582a?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+qcheck %>%
+  filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+         disagg == "KP",
+         country== country1,
+         fy == 2023) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+         disagg == "KP",
+        country== country2,
+         fy == 2023) %>%
+  select(country, indicator, fyq, results) %>%
+  group_by(country, indicator, fyq) %>%
+  summarise(results = sum(results)) %>%
+  print()
+```
+
+### 5c
+
+[top 3 countries](https://tableau.usaid.gov/views/KeyPopulationsDashboard/6_aKPTXdisaggreporting?:showAppBanner=false&:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+kp_tx_disagg_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR")
+
+top4 <- c("Nigeria", "Vietnam", "Ukraine", "Mozambique")
+
+check %>% filter(
+  country %in% top4,
+  disagg == "KP", 
+  fy == current_fy,
+  indicator %in% kp_tx_disagg_indicators) %>%
+  group_by(country, indicator) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% 
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  print()
+```
+
+### 5d - [TX_ML - usaid](https://tableau.usaid.gov/views/KeyPopulationsDashboard/6_bKPTX_ML/a3af8b22-db55-446a-aa16-a94b51cc9e18/90c15629-ec9e-4370-b271-f788df6f3d9c?:display_count=n&:showVizHome=n&:origin=viz_share_link)
+
+```{r}
+check %>% filter(
+  country %in% c("Philippines"),
+  disagg == "KP", 
+  fy == 2023,
+  indicator == "TX_ML") %>%
+  group_by(country, keypop, tx_ml_reason) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% 
+  pivot_wider(values_from = sum.results, names_from = tx_ml_reason) %>%
+  print()
+ 
+
+ 
+#how to calculate percent of total? question for another round
+
+
+ check %>% filter(
+  country == "Philippines",
+  disagg == "KP", 
+  fy == current_fy,
+  indicator == "TX_ML") %>%  group_by(country, keypop) %>%
+  summarise(sum.results=sum(cumulative),
+            .groups = "drop") %>% 
+ mutate(percent_results = scales::percent((sum.results / sum(sum.results)))) %>%
+  print()
+ 
+  check %>% filter(
+  country == "Philippines",
+  disagg == "KP", 
+  fy == current_fy,
+  indicator == "TX_ML") %>%  group_by(country, tx_ml_reason) %>%
+  summarise(sum.results=sum(cumulative),
+            .groups = "drop") %>% 
+ mutate(percent_results = scales::percent(sum.results / sum(sum.results))) %>%
+  print()
+```
+
+### 5e
+
+```{r}
+mmd %>%
+  filter(str_detect(indicator, "TX_CURR_ARV"),
+         country == "Philippines",
+         standardizeddisaggregate == "Total Numerator",
+         funding_agency == "USAID",
+         fy == 2023) %>%
+  group_by(country, indicator, mech_code) %>%
+  summarise(results = sum(cumulative)) %>%
+    arrange(mech_code, indicator) |> 
+  print()
+
+
+# mmd %>%
+#   filter(str_detect(indicator, "TX_CURR_ARV"),
+#          country %in% c("Honduras","South Sudan"),
+#          standardizeddisaggregate == "Total Numerator",
+#          funding_agency == "USAID",
+#          fy == 2023) %>%
+#   group_by(country, indicator, mech_name) %>%
+#   summarise(results = sum(cumulative)) %>%
+#   pivot_wider(names_from = indicator, values_from = results) %>%
+#   arrange(country) |> 
+#   print()
+```

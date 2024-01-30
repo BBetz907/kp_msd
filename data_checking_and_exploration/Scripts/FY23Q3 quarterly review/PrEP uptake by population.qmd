@@ -119,38 +119,43 @@ ggsave(plot=prep_trends_smallx, filename = paste0("../../Images/OHA Q3/prep_tren
 
 #### PrEP_NEW trends - small priority populations
 ```{r}
+last2_color <- c(grey60k, grey30k)
+
 prep_trends_smallerx <- prep_trends |> filter(indicator == ind[1],
-                          pop %in% c("TG", "PWID", "Prisoners", "Pregnant", "Breastfeeding")) |> 
+                          pop %in% c("TG", "PWID")) |> 
+    mutate(last2 = case_when(pop!="AGYW" & fyq %in% c("FY23 Q2", "FY23 Q3") ~ "attention",
+                                .default = "norm")) |> 
   ggplot(aes(x=fyq)) +
-  geom_bar(aes(y=results), stat = "identity",  position = "dodge2") +
-  facet_wrap(~population, nrow = 1, labeller = label_wrap_gen(width = 20)) +
+  geom_bar(aes(y=results, fill=last2), stat = "identity",  position = "dodge2") +
+  scale_fill_manual(values=last2_color) +
+  facet_wrap(~pop, nrow = 1, labeller = label_wrap_gen(width = 20)) +
     scale_y_continuous(labels = comma, 
-                     n.breaks = 5,
-                     minor_breaks = waiver(), limits = c(0, 5000), 
+                     n.breaks = 3,
+                     minor_breaks = waiver(), 
+                     limits = c(0, 5200), 
                      expand = c(0, 0)) +
   si_style_ygrid() +
   theme(
       #format axes
         axis.title = element_blank(),
-        axis.text.x.bottom = element_text(angle=90, vjust = 0.3),
-        panel.grid.minor.y = element_line(color = grey10k),
+        axis.text.x.bottom = element_blank(),
+        axis.text.y = element_text(size=6),
+          # element_text(angle=90, vjust = 0.3),
+        panel.grid.minor.y = element_blank(),
         panel.grid.major.y = element_line(color = grey10k),
       #format facet titles
-        strip.text.x.top = element_text(hjust = 0.5, vjust = 0, face = "bold", size = 16),
+        strip.text.x.top = element_text(hjust = 0.5, vjust = 0, face = "bold", size = 7),
       #format legends
         legend.position = "none",
         legend.title = element_blank(),
       #format plot title
         plot.title = element_markdown(face="bold", size = 36),
         plot.subtitle = element_markdown(size=14),
-        plot.caption = element_markdown(size=11, margin = margin(t=20))) +
-  labs(
-    subtitle  = "USAID Global PrEP_NEW result trends and percent of total by population, excluding KP results for Uganda where KP disaggregate reporting is paused",
-    ) 
+        plot.caption = element_markdown(size=11, margin = margin(t=20))) 
 
 prep_trends_smallerx
 
-ggsave(plot=prep_trends_smallerx, filename = paste0("../../Images/OHA Q3/prep_trends_smallerx.png"), width = 16, height = 5)
+ggsave(plot=prep_trends_smallerx, filename = paste0("../../Images/OHA Q3/prep_trends_smaller_pops.png"), width = 2, height = 1.5)
 ```
 
 ### PrEP_NEW trends - total
@@ -476,27 +481,27 @@ prep_trends_pop <- qcheck |>
     !(fy == 2023 & qtr == "Q4") & fy != 2024
          ) |> 
   group_by(country, indicator, pop, fyq) |> 
-  summarise(results=sum(results), .groups = "drop") |> 
+  summarise(results=sum(results, na.rm = TRUE), .groups = "drop") |> 
   mutate(indicator = str_to_lower(indicator)) 
 
+write_csv(prep_trends_pop, "../../Dataout/OHA Q3/prep_trends.csv")
 
 prep_trends_combos <- prep_trends_pop |>
   pivot_wider(names_from = c(indicator, fyq), values_from = results) |> 
   clean_names() |> 
   relocate(prep_ct_fy22_q4, .before = prep_ct_fy23_q1) |> 
-  filter(
-    (prep_new_fy23_q3 >= 2*prep_new_fy23_q1 |
-    prep_new_fy23_q3 >= 2*prep_new_fy22_q4) & prep_new_fy23_q3 >= 0.9* prep_new_fy23_q2
-    | (prep_ct_fy23_q3 >= 2*prep_ct_fy23_q1 |
-    prep_ct_fy23_q3 >= 2*prep_ct_fy22_q4) & prep_ct_fy23_q3 >= 0.9* prep_ct_fy23_q2
-    ) |> 
+  # filter(
+  #   (prep_new_fy23_q3 >= 2*prep_new_fy23_q1 |
+  #   prep_new_fy23_q3 >= 2*prep_new_fy22_q4) & prep_new_fy23_q3 >= 0.9* prep_new_fy23_q2
+  #   | (prep_ct_fy23_q3 >= 2*prep_ct_fy23_q1 |
+  #   prep_ct_fy23_q3 >= 2*prep_ct_fy22_q4) & prep_ct_fy23_q3 >= 0.9* prep_ct_fy23_q2
+  #   ) |> 
   print()
 
 prep_pop_combos <- prep_trends_combos |> select(country, pop) |> print()
 
 
 prep_trends_meriting_exploration <- prep_trends_pop |> semi_join(prep_pop_combos)
-write_csv(prep_trends_meriting_exploration, "../../Dataout/OHA Q3/prep_trends.csv")
 
 prep_trends_meriting_exploration
 ```
