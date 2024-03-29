@@ -6,6 +6,8 @@ editor: visual
 
 ### 5a -[linkage trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_aTestingandLinkageTrends/40426f3a-6e0b-4ada-897c-dfe5461884db/17a3ec3f-a566-49cb-add4-e53293d0ba54?:display_count=n&:showVizHome=n&:origin=viz_share_link)
 
+PEPFAR 2024 all correct. USAID correct for prior years, small discrepancies for CDC Targets.
+
 ```{r, warning=false}
 library(glue)
 country1 <- "Cote d'Ivoire"
@@ -13,8 +15,7 @@ country2 <- "Cameroon"
 
 linkage1 <- qcheck %>%
   filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
-         disagg == "KP",
-         fy == 2024         ) %>%
+         disagg == "KP", ) %>%
   group_by(indicator, disagg, fyq) %>%
   summarise(results = sum(results), .groups = "drop") 
 
@@ -24,36 +25,41 @@ linkage1 %>%
   geom_text(position = position_nudge(y=30), aes(label = results)) +
   scale_color_manual(values = c(HTS_TST_POS = "#808080", TX_NEW = "#1e87a5")) +
   si_style_nolines() + 
-  labs(title = glue::glue("PEPFAR {linkage1$disagg} trends"))
+  labs(title = glue::glue("USAID {linkage1$disagg} trends"))
 
 linkage2 <- qcheck %>%
-  filter(indicator %in% c("TX_NEW", "HTS_TST_POS"),
+  filter(results > 0,
+         indicator %in% c("TX_NEW", "HTS_TST_POS"),
          disagg == "KP",
-         keypop == "FSW", 
-         fy == 2024) %>%
+         keypop == "FSW") %>%
   group_by(indicator, keypop, fyq) %>%
   summarise(results = sum(results)) 
 
 linkage2 %>%  ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + geom_line() + geom_text(position = position_nudge(y=30), aes(label = results)) +
-  scale_color_manual(values = c(HTS_TST_POS = "#808080", TX_NEW = "#1e87a5")) + si_style_nolines() + labs(title = glue("PEPFAR {linkage2$keypop} trends"))
+  scale_color_manual(values = c(HTS_TST_POS = "#808080", TX_NEW = "#1e87a5")) + si_style_nolines() + labs(title = glue("USAID {linkage2$keypop} trends"))
 
 ```
 
 ### 5b - [TX trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_bTXTrends/cec16239-2ef8-43d9-ad2e-c6f04068e95b/6571f6c6-2393-4c5f-a7dd-718a22cf582a?:display_count=n&:showVizHome=n&:origin=viz_share_link)
 
+Nigeria, TZ, Uganda numbers throw things off but otherwise ok
+
 ```{r}
-qcheck %>%
-  filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+qcheck |> 
+  filter(
+         indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
          disagg == "KP",
-         fy == 2024) %>%
+         !country %in% c("Nigeria", "Tanzania"),
+         funding_agency == "USAID") %>%
   group_by(indicator, fyq) %>%
-  summarise(results = sum(results)) %>%
+  summarise(results = sum(results)) %>% 
   print()
 
 qcheck %>%
-  filter(indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
-         disagg == "KP",
-         fy == 2024) %>%
+  filter(
+         indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW"),
+         !country %in% c("Nigeria", "Tanzania"),
+         disagg == "KP") %>%
   group_by( indicator, fyq) %>%
   summarise(results = sum(results)) %>%
   print()
@@ -118,15 +124,15 @@ check %>% filter(
 ### 5e
 
 ```{r}
-mmd %>%
-  filter(str_detect(indicator, "TX_CURR_ARV"),
+mmd %>% 
+  filter(str_detect(indicator, "TX_CURR"),
          country == "Philippines",
-         standardizeddisaggregate == "Total Numerator",
+         !is.na(otherdisaggregate),
          # funding_agency == "USAID",
          fy == 2024) %>%
-  group_by( indicator, mech_code) %>%
+  group_by(otherdisaggregate, mech_code) %>%
   summarise(results = sum(cumulative)) %>%
-    arrange(mech_code, indicator) |> 
+    arrange(mech_code, otherdisaggregate) |> 
   print()
 
 

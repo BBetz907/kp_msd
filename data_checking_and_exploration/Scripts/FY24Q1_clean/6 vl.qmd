@@ -14,7 +14,8 @@ vl_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2", "TX_CURR")
 pvls_trends_country <- qcheck %>% filter(
   disagg == "KP", 
   fy == 2024,
-  # funding_agency == "USAID",
+  funding_agency == "USAID",
+  !country == "Liberia",
   indicator %in% vl_indicators) %>%
   group_by(fyq, disagg, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>% print()

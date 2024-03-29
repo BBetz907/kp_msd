@@ -8,7 +8,7 @@ editor: visual
 
 ```{r}
 # #| echo: false
-countries <- c("Philippines", "Ethiopia")
+countries <- c("Philippines", "Nepal")
 # 
 # prep_trends <- qcheck %>%
 #   filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
@@ -28,12 +28,13 @@ countries <- c("Philippines", "Ethiopia")
 
 ### Prevention Trends
 
-clean
+clean for USAID. Other Agencies slightly off in past FYs
 
 ```{r, warning=FALSE}
 prep_trends1 <- qcheck %>%
   filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
          disagg == "KP",
+         funding_agency=="USAID",
          # country %in% countries[1]
          ) %>%
   group_by(indicator, keypop, fyq) %>%
