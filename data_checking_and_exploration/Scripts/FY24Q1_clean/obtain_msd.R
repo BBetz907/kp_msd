@@ -1,12 +1,12 @@
-library(tidyverse)
-library(janitor)
-library(gagglr)
-library(grabr)
-library(htmltools)
+# library(tidyverse)
+# library(janitor)
+# library(gagglr)
+# library(grabr)
+# library(htmltools)
 
 # set_pano("bbetz@usaid.gov")
 
-load_secrets()
+# load_secrets()
 
 # set_paths(folderpath_msd = "Data",
 #                     folderpath_datim =  "Data",
@@ -29,16 +29,16 @@ dir_items <- pano_items(page_url = url,
                         password = pano_pwd()) 
 
 mer_items_path <-  dir_items |> filter(str_detect(item, "MER\\sFY20[0-9]{2}\\sQ[1-4]")) |> 
-  pull(path) |> 
+  pull(path) #|> 
   # pano_items() |> 
-  print()
+  # print()
 
 mer_items <- pano_items(mer_items_path)
 
-url_mer_archive <- mer_items |> 
-  filter(str_detect(item, "FY15-[0-9]{2}")) |> pull(path) 
-
-mer_items_archive <- pano_items(url_ou_im_historic)
+# url_mer_archive <- mer_items |> 
+#   filter(str_detect(item, "FY15-[0-9]{2}")) |> pull(path) 
+# 
+# mer_items_archive <- pano_items(url_ou_im_historic)
 
 
 dest_path <- paste0(si_path(),"/Temp/")
@@ -50,7 +50,8 @@ url_psnu_im <- mer_items %>%
   filter(type == "file zip_file",
          str_detect(item, ".*_PSNU_IM_FY2.*.zip$")) %>%
   pull(path) %>%
-  first() |> print()
+  # first() |> 
+  print()
 
  # quick fix to filepaths --------------------------------------------------
 grabr::pano_download(item_url = url_psnu_im, session = sess)
@@ -59,12 +60,14 @@ grabr::pano_download(item_url = url_psnu_im, session = sess)
 
  
 # obtain OUxIM MSD  ------------------------------------------------
+
+
 url_ou_im <- mer_items %>%
    filter(type == "file zip_file",
           str_detect(item, ".*_OU_IM_FY.*.zip$")) %>%
    pull(path)
 
- grabr::pano_download(item_url = url_ou_im, session = sess)
+ grabr::pano_download(item_url = url_ou_im, session = sess, dest_path = si_path())
  
  
 ## obtain historic OU data
@@ -95,9 +98,11 @@ grabr::pano_download(item_url = url_nat_subnat, session = sess)
 
 
 # Download archived PSNUxIM MSD ------------------------------------------------
-url_archived_msd <- items %>%
+url_archived_msd <- mer_items %>%
+  filter(str_detect(item, "FY1")) |> 
+  pull(path) |> 
+  pano_items() |> 
   filter(type == "file zip_file",
-         str_detect(parent, "FY1"),
          str_detect(item, ".*_PSNU_IM_FY1.*.zip$")) %>% pull(path) |> print()
   
 
@@ -106,16 +111,34 @@ grabr::pano_download(item_url = url_archived_msd, session = sess)
 
 
 # obtain mer calculations across time  ------------------------------------------------
-url_calc_by_time_items <- items %>%
-  filter(type == "file zip_file",
-         str_detect(parent, "MER Calculations Across Time$")
-  ) %>%
-  pull(path) |> print()
+#safe for VL and net new fields replace these
+    # url_calc_by_time_items <- mer_items %>%
+    #   filter(str_detect(item, "MER Calculations Across Time$")) |> 
+    #   pull(path) |> 
+    #   pano_items() |> 
+    #   filter(type == "file zip_file",
+    #          str_detect(parent, "MER Calculations Across Time$")
+    #   ) %>%
+    #   pull(path) |> print()
+    # 
+    # dest_path_site <- paste0(si_path(),"/site-level calculations/")
+    # 
+    # map(url_calc_by_time_items, ~grabr::pano_download(item_url = .x, session = sess, dest = dest_path_site))
 
-dest_path_site <- paste0(si_path(),"/site-level calculations/")
 
-map(url_calc_by_time_items, ~grabr::pano_download(item_url = .x, session = sess, dest = dest_path_site))
 
+
+# regional program site files ---------------------------------------------
+
+
+site_items <- mer_items |> filter(item == "Site Level") |> pull(path)
+
+regional_site_urls <- pano_items(site_items) |> filter(str_detect(item, "Region|Vietnam")) |> pull(path) |> print()
+
+dest_path_site2 <- paste0(si_path(),"/site-level/")
+
+map(regional_site_urls, ~grabr::pano_download(item_url = .x, session = sess, dest = dest_path_site2))
+# grabr::pano_download(item_url = regional_site_urls[4], session = sess, dest = dest_path_site2)
 
 # obtain site-level data for select countries -----------------------------
 #read list of OUs
@@ -137,7 +160,7 @@ epic_ous_list <- epic_ous |> str_replace_all("\\s", "\\\\s") |> str_replace("\\'
 url_site <- items |> 
   filter(type == "file zip_file",
          str_detect(parent, "n\\/Site\\sLevel"),
-         str_detect(item, epic_ous_list)
+         # str_detect(item, epic_ous_list)
          ) |>
   pull(path) |>
   print()

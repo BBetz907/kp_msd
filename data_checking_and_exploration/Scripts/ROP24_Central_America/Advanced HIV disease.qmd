@@ -1,0 +1,188 @@
+---
+title: "Key Population Epidemic Advanced HIV disease at diagnosis investigation"
+format: html
+editor: visual
+---
+
+Obtain OU MSD
+
+```{r, output=FALSE}
+ou_file_name <- glamr::return_latest(folderpath =  "../../Data/", pattern = "OU_IM_FY2") |> print()
+ou_file_name <- gophr::read_psd(ou_file, save_rds = TRUE, remove_txt = FALSE)
+
+
+```
+
+Obtain site-level if advantageous for identifying community testing
+
+```{r}
+region_file_names <- list.files(here::here("Data/site-level")) |> print()
+region_filepaths <- str_c("../../Data/site-level/", region_file_names)
+region_file <- map_dfr(region_filepaths, ~gophr::read_psd(file = .x))
+```
+
+transfrom
+
+```{r}
+advanced_hiv_community_testing <-  CW21CX$14 |> filter(
+  str_detect(operatingunit, "Region") | country %in% c("Ukraine", "Vietnam"),
+  (indicator == 'HTS_TST_POS' & str_detect(standardizeddisaggregate, "Modality")) |
+    # indicator == "HTS_INDEX_NEWPOS" |
+    (indicator %in% c("TX_NEW", "TX_RTT") &   
+       str_detect(standardizeddisaggregate, "CD4")),
+  fiscal_year >= 2023   
+  ) |> 
+  select(-contains("20"), -contains("safe"), -contains("status")) |> 
+  pivot_longer(cols = targets:cumulative, names_to = "results_or_targets", values_to = "values") |>
+  mutate(
+    cd4 = case_when(str_detect(otherdisaggregate, "CD4") ~ otherdisaggregate),
+    operatingunit = case_when(
+      country %in% c("Brazil", "Colombia", "Peru") ~ "", 
+      country %in% c("Trinidad and Tobago", "Jamaica", "Ukraine", 
+                    "Vietnam", "India") ~ "", 
+      country %in% c( "El Salvador", "Guatemala", "Honduras", 
+                     "Nicaragua", "Panama") ~ "Central America",
+      country %in% c( "Tajikistan", "Kyrgyzstan", "Kazakhstan") ~ "Asia - Central",
+      country %in% c("PNG", "Papua New Guinea", "Indonesia", 
+                     "Philippines") ~ "Asia - Pacific",
+      country %in% c( "Burma", "Laos", "Nepal", "Thailand") ~ "Asia - South",
+      # country %in% c("Benin", "Burkina Faso", "Senegal", "Togo") ~ "West Africa 1", 
+      # country %in% c("Ghana", "Liberia", "Mali", "Sierra Leone") ~ "West Africa 2", 
+      .default = operatingunit
+    ),
+    community_or_facility_testing = case_when(
+           str_detect(modality, "Mod$|Mobile") ~ "Community",
+           !is.na(modality) ~ "Facility"
+           ),
+    qtr = as.numeric(str_extract(results_or_targets, "[1-4]$")),
+    results_or_targets = if_else(results_or_targets %in% 
+            c("cumulative", "targets"), results_or_targets, "quarterly results"),
+    fyq = str_c("FY", 
+                str_extract(as.character(fiscal_year), "[0-9]{2}$"), " Q", qtr)   
+    ) |> 
+  relocate(values, .after = fyq) |> 
+  filter(results_or_targets != "targets",
+         values > 0) |> 
+  # group_by(across(orgunituid:fyq)) |>
+  group_by(across(operatingunit:qtr)) |>
+    summarize(values = sum(values, na.rm = TRUE), .groups = "drop") |> 
+  filter(    indicator != "HTS_INDEX_NEWPOS")
+
+advanced_hiv_community_testing |> count(indicator, standardizeddisaggregate)
+
+advanced_hiv_community_testing |> count(indicator, community_or_facility_testing, modality)
+
+advanced_hiv_community_testing <- advanced_hiv_community_testing |> mutate(filepath = ou_file_name)
+
+write_csv(advanced_hiv_community_testing, "../../Dataout/concentrated_epidemics_advanced_hiv_analysis.csv")
+```
+
+For FY23-24, Mod appropriately distinguished between facility and community.
+
+```{r}
+advanced_hiv_community_testing |> glimpse()
+
+advanced_hiv_community_testing |> filter(indicator == "HTS_TST_POS") |> count(sitetype, community_or_facility_testing)
+```
+
+```{r}
+region_file |> count(indicator)
+```
+
+produce output
+
+```{r}
+af <- advanced_hiv_community_testing |> filter(results_or_targets=="cumulative",
+                                         fiscal_year == 2024,
+                                         indicator %in% 
+                                           c("HTS_TST_POS", "TX_NEW")) |> 
+  mutate(attribute = if_else(is.na(cd4), community_or_facility_testing, cd4)) |> 
+  group_by(operatingunit, country, indicator, attribute) |> 
+  summarise(values=sum(values), .groups = "drop") |> 
+  pivot_wider(values_from = values, names_from = c(indicator, attribute)) 
+
+```
+
+```{r}
+names(af) <- tolower(names(af))
+ou_order <- c("Central America", "Asia - Central", "West Africa Region", "Asia - South", "")
+
+av <- af |>
+  filter(operatingunit != "Asia - Pacific",
+         !country %in% c("Colombia", "Trinidad and Tobago", "Peru", "Laos",
+                         "Brazil",
+                         "Burkina Faso", "Senegal", "Ghana", "Sierra Leone")) |>
+  mutate(operatingunit = reorder(operatingunit, match(operatingunit, ou_order)),
+    community_hts_pos = 
+      hts_tst_pos_community/(hts_tst_pos_facility + hts_tst_pos_community),
+    advanced_hiv_at_tx_initiation = `tx_new_<200 cd4`/
+        (`tx_new_<200 cd4` + `tx_new_>=200 cd4`),
+    community_hts_pos_ca = case_when(operatingunit == "Central America" ~ 
+                                       community_hts_pos),
+    advanced_hiv_at_tx_initiation_ca = case_when(operatingunit == "Central America" ~
+                                       advanced_hiv_at_tx_initiation)) 
+# |> select(operatingunit, country, 
+#                 community_hts_pos, advanced_hiv_at_tx_initiation) |> 
+#   pivot_longer(cols = c("community_hts_pos", "advanced_hiv_at_tx_initiation"),
+#                names_to = "measure", values_to = "values") |> print
+
+
+```
+
+```{r, warning=false}
+av |> ggplot(aes(x=country)) + 
+  # facet_wrap(vars(operatingunit)) +
+  geom_col(aes(
+                y=community_hts_pos), fill = "orange", 
+           width = 0.2,
+           ) +
+  geom_text(aes(
+                y=community_hts_pos + 0.02, label = 
+                  scales::percent(community_hts_pos_ca, accuracy = 1)
+                ),
+            position = position_nudge(x = +0.3),
+            color = "orange",
+            size = 3) +
+  
+  geom_col(aes(
+               y=advanced_hiv_at_tx_initiation), 
+           position = position_nudge(x = -0.2),
+           fill = "blue", 
+           # position = position_nudge(x = 0.2),
+           width = 0.2,
+           # width = 2/8*length(unique(country))
+           ) +
+  geom_text(aes(
+                y = advanced_hiv_at_tx_initiation  + 0.05,
+                label = scales::percent(advanced_hiv_at_tx_initiation_ca, 
+                                        accuracy = 1) ),
+           position = position_nudge(x = -0.2),
+           color = "blue",
+           size = 3,
+  ) +
+  # annotate("text", x = 1, y = 0.55, 
+  #          label = "Advanced HIV disease", color = "blue", size = 3) +  
+  facet_wrap(~ operatingunit, nrow = 1, 
+             scales = "free_x"
+             ) +
+  scale_y_continuous(labels = scales::percent) +
+  si_style_ygrid() +
+  theme(
+      # Rotate x-axis labels for better readability
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_blank(),
+    plot.title = element_markdown()
+    ) +
+    # Specify title with HTML color tags
+  ggtitle(str_wrap("<span style='color: blue;'>Advanced HIV disease (CD4 <200) at Treatment Initiation</span> compared to<br><span style='color: orange;'>community testing contribution to all HTS casefinding</span> by country, OU during FY24Q1", width = 20))  
+
+
+  
+ggsave(filename = "../../Images/ROP24_CentralAmerica/Advanced_HIV_community_casefinding.png", 
+       plot = last_plot(), width = 9, height = 5)
+
+# + 
+  # labs(title = "Values by Country in Each Region", x = "Country", y = "Value") +
+    # Setting breaks and labels for x-axis
+  # scale_y_continuous(breaks = 1:8, labels = unique(df$country)) 
+```

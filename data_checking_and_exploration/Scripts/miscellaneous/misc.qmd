@@ -1,0 +1,65 @@
+---
+title: "Yearly totals"
+format: html
+editor: visual
+params: 
+  current_year: 2024
+---
+
+```{r}
+kp_summary <- ou_file |> filter(fiscal_year == params$current_year - 1, 
+                  str_detect(tolower(standardizeddisaggregate), 
+                             "keypop") |
+                  str_detect(tolower(standardizeddisaggregate), 
+                             "total")   ) |>
+  select( -contains("sex"), -indicatortype,
+         -categoryoptioncomboname, -contains("status"),
+         -contains("trends")) |> 
+   group_by(across(indicator:fiscal_year), funding_agency) |>
+    summarize(results = sum(cumulative, na.rm = TRUE), .groups = "drop")
+
+kp_summary |> group_by(indicator, standardizeddisaggregate, funding_agency) |> 
+  filter(indicator == "PrEP_NEW" | indicator == "TX_CURR", 
+         funding_agency == "USAID") |> 
+      summarize(results = sum(results, na.rm = TRUE), .groups = "drop")
+```
+
+
+
+
+```{r}
+agyw_summary <- ou_file |> filter(fiscal_year == params$current_year - 1, 
+                  sex == "Female",
+                  ageasentered %in% c("15-19", "20-24")) |>
+  select( -contains("sex"), -indicatortype,
+         -categoryoptioncomboname, -contains("status"),
+         -contains("trends")) |> 
+   group_by(across(indicator:fiscal_year), funding_agency) |>
+    summarize(results = sum(cumulative, na.rm = TRUE), .groups = "drop")
+
+
+```
+
+```{r}
+agyw_summary |> group_by(indicator, standardizeddisaggregate, funding_agency) |> 
+  filter(indicator == "PrEP_NEW", funding_agency == "USAID") |> 
+      summarize(results = sum(results, na.rm = TRUE), .groups = "drop")
+
+```
+Validate 50% claim for AGYW and KP by disavoing overlap
+```{r}
+kp_summary |> count(otherdisaggregate_sub)
+no_fsw <- kp_summary |> group_by(indicator, standardizeddisaggregate, funding_agency) |>   filter(indicator == "PrEP_NEW", funding_agency == "USAID", 
+         otherdisaggregate_sub != "FSW") |> 
+      summarize(results = sum(results, na.rm = TRUE), .groups = "drop")
+```
+```{r}
+ou_file |> filter(fiscal_year == params$current_year - 1, 
+                  str_detect(tolower(standardizeddisaggregate), "keypop"),
+                  funding_agency=="USAID",
+                  indicator == "TX_CURR"
+                    ) |> 
+  group_by() |> 
+  summarise(count = length(unique(country)))
+```
+

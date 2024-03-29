@@ -1,0 +1,183 @@
+---
+title: "read_msd"
+author: "Bourke Betz"
+format: html
+editor: visual
+---
+
+Identify the name of the latest PSNU x IM MER Structured Data Set
+
+```{r}
+
+file <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY2")
+
+file2 <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY1") 
+
+
+file_name <- str_extract(file, "(?<=Data\\/).+(?=\\.rds)") 
+file_name2 <- str_extract(file2, "(?<=Data\\/).+(?=\\.rds)") 
+```
+
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
+
+Read MSD
+
+```{r}
+mer_df <- gophr::read_psd(file, save_rds = TRUE, remove_txt = FALSE)
+
+# nepal_msd <- mer_df |> filter(country == "Nepal") |> glimpse()
+
+# mer_df2 <- gophr::read_psd(file2, save_rds = TRUE, remove_txt = FALSE) %>% 
+  # filter(fiscal_year>=2019)
+```
+
+Define indicator list and functions
+
+```{r}
+indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
+                    "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
+
+kp_setup <- function(df) {
+  df_ft <- df |> 
+    # filter to relevant disaggs for standard KP analysis 
+    filter(str_detect(standardizeddisaggregate, "KeyPop|Total|Sex|Preg"),
+           indicator %in% indicator_list) |> 
+    # Recode PVLS indicators to include NumDenom and Funding Agency = CDC
+    mutate(indicator = 
+           recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
+                  funding_agency = recode(funding_agency, "HHS/CDC" = "CDC")) |> 
+    # recode indicators as factor, rename fy, and create disagg variables for kp
+    mutate(indicator = factor(indicator, levels = indicator_list),
+           fy = fiscal_year,
+         partner = prime_partner_name,
+         disagg = str_extract(standardizeddisaggregate, "Total|KeyPop"),
+         disagg = recode(disagg, "KeyPop" = "KP"),
+         tx_ml_reason = case_when(indicator=="TX_ML" ~ 
+                                    str_extract(otherdisaggregate, 
+                                                "(?<=Outcome\\s-\\s).+")),
+         keypop = str_extract(otherdisaggregate,
+                              "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
+         keypop = recode(keypop, "People in prisons" = "Prisoners"),
+         kp_prev_status = case_when(standardizeddisaggregate == "KeyPop/Status" ~ 
+                                      str_extract(categoryoptioncomboname, 
+                                                  "(?<=\\,\\s).+$"))
+      ) |> 
+    arrange(indicator)
+  
+  return(df_ft)
+}
+
+kp_clean <- function(df, time = NULL, focus = NULL) {
+    #setup analytic prep for quarterly trend analysis
+    if (!is.null(time)) {
+    if (time == "fyq") {
+      df2 <- df |> 
+        filter(fiscal_year >= max(fiscal_year) - 1
+               # create alternative for q2 or q3 when targets from COP shift this)
+                 ) %>%
+      # select fields relevant for quarterly analysis, excluding cumulative and targets
+      select(operatingunit, country, snu1, psnu, partner, mech_code, 
+             mech_name, indicator, funding_agency, numeratordenom, 
+             disagg, otherdisaggregate, sex, ageasentered, 
+             standardizeddisaggregate, otherdisaggregate, keypop, 
+             safe_for_net_new, safe_for_vlc,
+             kp_prev_status, fy, qtr1, qtr2, qtr3, qtr4) |> 
+      # recode indicator and arrange for viz PURPOSES
+      mutate(indicator = factor(indicator, levels = indicator_list))|>  
+      arrange(indicator) |> 
+      # pivot to long format
+      pivot_longer(qtr1:qtr4, names_to = "qtr", 
+                   values_to = "results" ) |> 
+      mutate(results = coalesce(results, 0),
+         qtr = str_replace(qtr, "qtr","Q"),
+         fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr))
+      
+    #setup analytic prep for fiscal year achievement, trend, and target achievement analysis
+    } else if (time == "fy") {
+       df2 <- df |> 
+         filter(standardizeddisaggregate != "KeyPop/Status") |> 
+         mutate(
+            cumulative = coalesce(cumulative, 0),
+            targets = coalesce(targets, 0),
+         ) |> 
+         select(operatingunit, country, snu1, psnu, partner, 
+                mech_code, mech_name, indicator, funding_agency, 
+                numeratordenom, disagg, standardizeddisaggregate, 
+                safe_for_net_new, safe_for_vlc, sex, ageasentered,
+                tx_ml_reason, keypop, fy, targets, cumulative) |> 
+         mutate(indicator = factor(indicator, 
+                                   levels = indicator_list)) |> 
+         arrange(indicator)
+    
+    #print warning input if time is missing   
+    }  else {
+      stop("Invalid value for 'time'. Please specify 'quarterly' or 'annual'.")
+    }
+    
+  } else if (!is.null(focus)) {    
+      if (focus == "mmd") {
+      df2 <- df |> 
+        filter(str_detect(indicator,"TX_CURR(?!_Lag)"),
+               str_detect(standardizeddisaggregate, "ARVDispense|Total")) |> 
+        mutate(cumulative = coalesce(cumulative, 0),
+        targets = coalesce(targets, 0),
+        partner = prime_partner_name,
+        fy = fiscal_year,
+        arv = str_extract(otherdisaggregate, "(?<=-\\s).+")) |> 
+  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, standardizeddisaggregate, arv, otherdisaggregate, fy, targets, cumulative)
+    } else if (focus == "modality") {
+      df2 <- df |> 
+        filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
+                          str_detect(indicator, "HTS_TST") == TRUE
+               ) %>%
+        pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
+        mutate(results = coalesce(results, 0),
+          qtr = str_replace(qtr, "qtr","Q"),
+          fy = fiscal_year,
+          fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr),
+          age = trendscoarse) %>%
+      select(operatingunit, country, snu1, psnu, prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom,
+             standardizeddisaggregate, modality, fy, fyq, results, age, ageasentered, sex)
+    }  else {
+      stop("Invalid value for 'focus'. Please set 'mmd' or 'modality' for focus")
+    }
+  } else {
+    stop("At least one of 'time' and 'focus' must be specified.")
+
+}
+  
+  return(df2)
+}
+# 
+# # define function to run prep for KP adjacent analyses
+# kp_adjacent <- function(df, focus) {
+#   if (focus == "mmd"){
+#     
+#   } else if (focus = "modality") {
+#     
+#   } else {
+#     stop("Invalid input for 'focus'. Please specify "mmd" or ")
+#   }
+#     
+#   
+#   return(df_focus)
+# }
+
+```
+
+transform using the kp_setup() function and kp_time()
+
+```{r}
+check <- mer_df %>% kp_setup() |> kp_clean(time = "fy")
+qcheck <- mer_df %>% kp_setup() |> kp_clean(time = "fyq")
+
+mmd <- mer_df |> kp_setup() |> kp_clean(focus = "mmd")
+modality <- mer_df |> kp_setup() |> kp_clean(focus = "modality")
+```
+
+```{r}
+rm(mer_df)
+gc()
+# rm(mer_df2)
+
+```

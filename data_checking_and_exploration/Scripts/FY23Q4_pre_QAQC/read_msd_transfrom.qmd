@@ -5,34 +5,33 @@ format: html
 editor: visual
 ---
 
-Identify the name of the latest PSNU x IM MER Structured Data Set
-
+Identify the name of the LATEST PSNU x IM MER Structured Data Set then READ
 ```{r}
-
 file <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY2")
 
-file2 <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY1") 
-
-
 file_name <- str_extract(file, "(?<=Data\\/).+(?=\\.rds)") 
-file_name2 <- str_extract(file2, "(?<=Data\\/).+(?=\\.rds)") 
+
+mer_df <- gophr::read_psd(file, save_rds = TRUE, remove_txt = FALSE)
+
 ```
 
-![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
-
-Read MSD
-
+Identify the name of the ARCHIVED PSNU x IM MER Structured Data Set then READ
 ```{r}
-mer_df <- gophr::read_psd(file, save_rds = TRUE, remove_txt = FALSE)
-mer_df2 <- gophr::read_psd(file2, save_rds = TRUE, remove_txt = FALSE) %>% 
-  filter(fiscal_year>=2019)
+# file2 <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY1") 
+# file_name2 <- str_extract(file2, "(?<=Data\\/).+(?=\\.rds)") 
+# mer_df2 <- gophr::read_psd(file2, save_rds = TRUE, remove_txt = FALSE) %>% 
+#   filter(fiscal_year>=2019)
+```
+
+Read other MSDs
+```{r}
+# nepal_msd <- gophr::read_psd(file, remove_txt = FALSE) |> 
+  # filter(country == "Nepal")
 ```
 
 transform
 
 ```{r}
-
-
 table(mer_df$indicator)
 
 indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
@@ -41,14 +40,15 @@ indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW"
 df <- mer_df %>%  
   # rbind(mer_df2) %>%
   filter(str_detect(standardizeddisaggregate, "KeyPop|Total|Sex|Preg"),
-         country!= "Ukraine") %>%
+         # country!= "Ukraine"
+         ) %>%
   mutate(indicator = 
            recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
-                  funding_agency = recode(funding_agency, "HHS/CDC" = "CDC")) %>%
+                  funding_agency = recode(funding_agency, "HHS/CDC" = "CDC"),
+          ) %>%
   filter(indicator %in% indicator_list) %>% 
   mutate(indicator = factor(indicator, levels = indicator_list)) %>% 
-  arrange(indicator) %>% 
-  glimpse()
+  arrange(indicator)
 
 ```
 
@@ -70,7 +70,7 @@ check <- df %>% filter(standardizeddisaggregate != "KeyPop/Status") %>%
 
 ```{r}
 
-qcheck <- df %>% filter(fiscal_year >= 2022) %>%
+qcheck <- df %>% filter(fiscal_year > 2022) %>%
   mutate(fy = fiscal_year,
          partner = prime_partner_name,
          disagg = str_extract(standardizeddisaggregate, "KeyPop|Total|Age|Preg"),
@@ -122,6 +122,4 @@ mmd <- mer_df %>% filter(str_detect(indicator,"TX_CURR(?!_Lag)"),
 
 ```{r}
 rm(mer_df, df)
-
-table(check$funding_agency)
 ```
