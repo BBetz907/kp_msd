@@ -6,6 +6,7 @@ library(scales)
 library(gt)
 library(ggtext)
 library(htmltools)
+library(googlesheets4)
 
 load_secrets()
 

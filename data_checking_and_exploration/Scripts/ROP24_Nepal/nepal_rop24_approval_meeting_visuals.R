@@ -17,6 +17,15 @@ cascades_wide <- read_csv("Data/ROP24_Nepal/cascade_contributions.csv", col_sele
   # rename(National_Picture_FY25 = Notional_FY25) |> 
   filter(indicator != "TX_NEW") |> glimpse()
 
+
+#y2, y1
+cascades_wide |> select(1,6:9) |> 
+  mutate(diff10 = PEPFAR_Targets_FY25 - PEPFAR_Targets_FY24,
+         diff21 = PEPFAR_Targets_FY26 - PEPFAR_Targets_FY25 ) |> print()
+
+
+
+
 cascades_long <- cascades_wide |> pivot_longer(cols = 2:9, values_to = "values", names_sep = "_", names_to = c("org", "ach_or_targ", "fy")) |> 
   mutate(type = str_c(org, ach_or_targ, sep = " "),
          indicator = if_else(str_detect(indicator, "Number of"), "Know their status", indicator),
@@ -81,21 +90,22 @@ cascades_long |> filter(fy=="FY23", indicator != "Know their status") |>
     legend.justification = "center",
     legend.box.just = "center",
     legend.title = element_blank(),
-    plot.title = element_text(margin = margin(b = 20, unit = "mm"))
+    # plot.title = element_text(margin = margin(b = 20, unit = "mm"))
     ) + 
   scale_fill_manual(values = c("#B3B5B8", denim)) +
   ggtitle(label = "FY23 National HIV cascade and PEPFAR Contributions")
 
 
-ggsave(filename = "Images/ROP24_Nepal/take2/fy23_national_pepfar_cascades.png", plot = last_plot(), width = 5.5, height = 4.5)
+ggsave(filename = "Images/ROP24_Nepal/take2/fy23_national_pepfar_cascades.png", plot = last_plot(), width = 10, height = 4.5)
 
 
 # Visualize present to planned scenario ----------------------------------------------
-context_order <- c("PEPFAR FY24 Q1 Results", "Y1 Targets", "PEPFAR FY25 Targets", "Y2 Targets", "PEPFAR FY26 Targets", "National 95-95-95 Goals")
+context_order <- c("PEPFAR FY24 Q1 Results", "PEPFAR FY24 Targets", "Y1 Targets", "PEPFAR FY25 Targets", "Y2 Targets", "PEPFAR FY26 Targets", "National 95-95-95 Goals")
 
 
 cascades_iterate <- cascades_long |> filter(org == "Notional" | 
                           (fy=="FY24" & type  == "PEPFAR Results") |
+                          (fy=="FY24" & type  == "PEPFAR Targets") |
                           (fy=="FY25" & type  == "PEPFAR Targets") |
                           (fy=="FY26" & type  == "PEPFAR Targets") ,
                         !indicator %in% c("PLHIV", "Know their status")) |> 
@@ -117,6 +127,7 @@ cascades_iterate$context <- fct_relevel(cascades_iterate$context, context_order)
 
 ## original
 cascades_iterate |> 
+  filter(context!="Y2 Targets") |> 
   ggplot(aes(x=indicator, fill = context)) + 
   geom_col(aes(y = values), 
            position = position_dodge(width = 0.5)
@@ -135,11 +146,44 @@ si_style_ygrid() +
     legend.box.just = "center",
     legend.title = element_blank(),
     plot.title = element_text(margin = margin(b = 28, unit = "mm"))) + 
+  scale_fill_manual(values = c(denim,
+                               "#436ec1",
+                               "#7396ee", 
+                               # denim_light,
+                               "#B3B5B8")) +
+  ggtitle(label = "Current FY results and target with ROP Y1 target progress")
+
+
+ggsave(filename = "Images/ROP24_Nepal/take2/year1_cascade_progress.png", plot = last_plot(), width = 5.8, height = 5.5)
+
+
+cascades_iterate |> 
+  filter(!context %in% c("PEPFAR FY24 Targets")) |> 
+  ggplot(aes(x=indicator, fill = context)) + 
+  geom_col(aes(y = values), 
+           position = position_dodge(width = 0.5)
+  ) + 
+  si_style_ygrid() +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 12)) +
+  theme(
+    # axis.text.x = element_text(angle = 90),
+    axis.title = element_blank(),
+    axis.line.y = element_blank(),
+    panel.background = element_blank(),
+    legend.text = element_text(size=8),
+    legend.position = "bottom",
+    legend.justification = "center",
+    legend.box.just = "center",
+    legend.title = element_blank(),
+    plot.title = element_text(margin = margin(b = 28, unit = "mm"))) + 
   scale_fill_manual(values = c(denim, "#7396ee", denim_light, "#B3B5B8")) +
-  ggtitle(label = "ROP24 inputs to support the National 2nd and 3rd 95 goals")
+  ggtitle(label = "ROP24 Y1 & Y2 inputs to support National 2nd & 3rd 95 goals")
 
 
-ggsave(filename = "Images/ROP24_Nepal/take2/aspirational_national_pepfar_cascades2.png", plot = last_plot(), width = 5.5, height = 4.5)
+ggsave(filename = "Images/ROP24_Nepal/take2/year12_cascade_progress.png", plot = last_plot(), width = 5.8, height = 5.5)
+
+
 
 cascades_iterate |> count(context)
 cascades_iterate |> filter(fy=="FY26")
@@ -331,3 +375,49 @@ nepal_rop |>
 ggsave(filename = "Images/ROP24_Nepal/take2/fy24_ach.png", plot = last_plot(), width = 11, height = 4.5)
 
 
+
+# budget viz --------------------------------------------------------------
+
+budget <- data.frame(fy=c(2023,2024,2025), 
+           type = c("International", "International", "International", "Local", "Local", "Local"),
+           budget = c(9925000, 10225000,9925000-2500000, 0, 0, 2500000)
+           ) |> 
+  mutate(budget_last = case_when(fy==2025 ~ budget,
+                                 .default = NA))
+
+# Custom formatting function
+currency_millions <- function(x) {
+  paste0(dollar(round(x/1000000, 1)), "M")
+}
+
+budget |> ggplot(aes(x = fy, fill = type)) +
+  geom_area(aes(y=budget)) +
+  # geom_text(data = budget |> filter(fy == 2025),
+  #           aes(y=budget,
+  #               # color = type,
+  #               label = currency_millions(budget)),
+  #           vjust = 0, hjust = 1.1,
+  #           position = position_stack(vjust = 0.5),
+  #           fontface = "bold"
+  #           ) +
+  scale_x_continuous(labels = function(x) as.integer(x), breaks = budget$fy) +
+  scale_y_continuous(labels = currency_millions, 
+                     # limits = c(0,11000000)
+                     ) +
+  scale_fill_manual(values = c(International = "#005e7a", Local = "#a6fdff")) + 
+    si_style_ygrid() +
+  theme(
+    # plot.margin = margin(r = 2, unit = "cm")
+    
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "none",
+    strip.text = element_text(hjust = 0.5, face = "bold", ),
+    plot.title = element_text(
+      # hjust = 0.45,
+      margin = margin(b = 5, unit = "mm"))
+  ) +
+  ggtitle(label = "PEPFAR Nepal Annual Budget trends")
+
+ggsave(filename = "Images/ROP24_Nepal/take2/pepfar_budget_trends.png", plot = last_plot(), width = 10, height = 4.3)
