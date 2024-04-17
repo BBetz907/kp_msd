@@ -33,7 +33,7 @@ fourties  <- c("40-44")
 
 ```
 
-```{r, echo=FALSE, warning=FALSE}
+```{r echo=FALSE, warning=FALSE}
 # read in EpiC IMs from 2 lists
 epic_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
                          sheet = 3) |> select(mech_code) |> mutate(mech_type = "Central KP Partner Mechanism") 
