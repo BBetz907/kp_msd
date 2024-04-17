@@ -69,6 +69,7 @@ url_ou_im <- mer_items %>%
 
  grabr::pano_download(item_url = url_ou_im, session = sess, dest_path = si_path())
  
+
  
 ## obtain historic OU data
 url_ou_im_archive <- pano_items(url_mer_archive) |> filter(type == "file zip_file",

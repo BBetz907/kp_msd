@@ -1,0 +1,178 @@
+---
+title: "Older KP Analysis"
+author: "Bourke Betz"
+date: "2024-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(gagglr)
+library(googlesheets4)
+
+load_secrets()
+```
+
+Data were downloaded and read from PEPFAR panorama
+```{r, include=FALSE}
+ou_file_path <- glamr::return_latest(folderpath =  "../Data/", pattern = "OU_IM_FY2") |> print()
+ou_file_name <- str_extract(ou_file_path, "(?<=Data\\/).+")  |> print()
+ou_msd <- gophr::read_psd(file = ou_file_path)
+```
+```{r, include=FALSE}
+#Define age groups for analysis
+fiftyplus <- c("50+", "50-54", "55-59", "60-64", "65+")
+fourtyplus  <- c("40-44", "45-49", "50+", "50-54", "55-59", "60-64", "65+")
+fourties  <- c("40-44")
+# fourties  <- c("40-44", "45-49")
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# read in EpiC IMs from 2 lists
+epic_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
+                         sheet = 3) |> select(mech_code) |> mutate(mech_type = "Central KP Partner Mechanism") 
+
+epic_input_old <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
+                         sheet = 5) |> filter(type=="Central KP Partner Mechanism") |> select(mech_code) |> 
+                  mutate(mech_type = "Central KP Mechanism")
+
+central_kp_mech_ims <- epic_input |> rbind(epic_input_old) |> count(mech_code, mech_type) |> select(-n)
+```
+
+
+
+Data were manipulated and transformed for analysis using R
+```{r data_prep, include=FALSE}
+plhiv_by_age <- ou_msd |>
+  filter(indicator=="TX_CURR", !is.na(ageasentered), !standardizeddisaggregate == "Age/Sex/ARVDispense/HIVStatus") |> 
+  mutate(mech_code = as.double(mech_code)) |> 
+  # left_join(epic_ims, by = "mech_code") |> 
+  mutate(age50plus = case_when(ageasentered %in% fiftyplus ~ "50+",
+                               .default = "not 50+"),
+         age40plus = case_when(ageasentered %in% fourtyplus ~ "40+",
+                               .default = "not 40+"),
+         age40s = case_when(ageasentered %in% fourties ~ "40s",
+                               .default = "not 40s"),
+         ) |> 
+  group_by(funding_agency, mech_code, age50plus, age40plus, age40s, fiscal_year, indicator) |> 
+  summarise(values=sum(cumulative, na.rm = TRUE), .groups = "drop")
+
+```
+
+#create functions
+```{r functions,  include=FALSE}
+
+filter_scope <- function(df, funding_agency_selection = NULL, mech_type = NULL) {
+      if (!is.null(funding_agency_selection)) {
+      df2 <-  df |> filter(funding_agency == {{funding_agency_selection}})
+      }
+      else if (!is.null(mech_type)) {
+      df2 <-    df |> 
+            inner_join({{mech_type}}, by = "mech_code")
+        }
+      else {
+        df2 <- df
+      }
+  return(df2)
+}
+
+test1 <- plhiv_by_age |> filter_scope(mech_type = central_kp_mech_ims)
+test1 |> count(funding_agency)
+
+
+sum_values_by_agecat <- function (df, agecat) {
+      df3 <- df |>   
+      group_by({{agecat}}, fiscal_year) |> 
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |> 
+      rename_with(~ "age", 1) |> 
+      group_by(fiscal_year) |> 
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total)) |> ungroup() |> 
+      filter(!str_detect(age, "^not"))
+  #   }    
+  return(df3)
+}
+
+
+#test
+test2 <- plhiv_by_age |> 
+  sum_values_by_agecat(agecat = age50plus) |> print()
+
+
+#iterate
+# agecolumns <- c("age50plus", "age40plus", "age40s")
+
+#CANNOT ITERATE
+# result_df <- map_df(agecolumns, ~ sum_values_by_agecat(plhiv_by_age, agecat = .x))
+
+```
+
+
+New enhanced function with 3 parts, to be used after filter_scope()
+```{r functions_plus,  include=FALSE}
+
+sum_values_by_agecat_plus <- function (df, agecat, keep_funding_agency = NULL, keep_mech_type = NULL) {
+    if (keep_funding_agency == TRUE & is.null(keep_mech_type)) {
+      df3 <- df |>
+      group_by({{agecat}}, fiscal_year, funding_agency) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total)) |> ungroup() |>
+      filter(!str_detect(age, "^not"))
+         }
+    else if (keep_mech_type == TRUE & is.null(keep_funding_agency)) {
+      df3 <- df |>
+      group_by({{agecat}}, fiscal_year, mech_type, funding_agency) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total)) |> ungroup() |>
+      filter(!str_detect(age, "^not"))
+        }
+    else if (keep_funding_agency == TRUE & keep_mech_type == TRUE) {
+      df3 <- df |>
+      group_by({{agecat}}, fiscal_year, mech_type, funding_agency) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total)) |> ungroup() |>
+      filter(!str_detect(age, "^not"))
+         }
+    else if (is.null(keep_funding_agency) & is.null(keep_mech_type)) {
+      df3 <- df |>
+      group_by({{agecat}}, fiscal_year) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total)) |> ungroup() |>
+      filter(!str_detect(age, "^not"))
+    }
+      else {stop("m")}
+  
+  return(df3)
+
+}
+
+test5 <- plhiv_by_age |> 
+  filter_scope(mech_type = central_kp_mech_ims) |>
+  sum_values_by_agecat_plus(agecat = age50plus,  keep_funding_agency = TRUE, keep_mech_type = TRUE) |> print()
+
+
+
+```
+# HOW to add warnings and notes, use the function cat
+example  cat("No columns found where all values are the same across all rows. Default name 'output' used.\n")
+
+
+# approach worked but these approaches were too complicated, settled on an approach which simplified the actions into one command because the sum_values_by_agecat_plus was dependent on filter_scope

@@ -1,0 +1,213 @@
+---
+title: "Older KP Analysis"
+author: "Bourke Betz"
+date: "2024-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(gagglr)
+library(googlesheets4)
+
+load_secrets()
+```
+
+Data were downloaded and read from PEPFAR panorama
+```{r, include=FALSE}
+ou_file_path <- glamr::return_latest(folderpath =  "../Data/", pattern = "OU_IM_FY2") |> print()
+ou_file_name <- str_extract(ou_file_path, "(?<=Data\\/).+")  |> print()
+ou_msd <- gophr::read_psd(file = ou_file_path)
+```
+```{r, include=FALSE}
+#Define age groups for analysis
+fiftyplus <- c("50+", "50-54", "55-59", "60-64", "65+")
+fourtyplus  <- c("40-44", "45-49", "50+", "50-54", "55-59", "60-64", "65+")
+fourties  <- c("40-44")
+# fourties  <- c("40-44", "45-49")
+
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# read in EpiC IMs from 2 lists
+epic_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
+                         sheet = 3) |> select(mech_code) |> mutate(mech_type = "Central KP Partner Mechanism") 
+
+epic_input_old <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
+                         sheet = 5) |> filter(type=="Central KP Partner Mechanism") |> select(mech_code) |> 
+                  mutate(mech_type = "Central KP Mechanism")
+
+central_kp_mech_ims <- epic_input |> rbind(epic_input_old) |> count(mech_code, mech_type) |> select(-n)
+```
+
+
+
+Data were manipulated and transformed for analysis using R
+```{r data_prep, include=FALSE}
+plhiv_by_age <- ou_msd |>
+  filter(indicator=="TX_CURR", !is.na(ageasentered), !standardizeddisaggregate == "Age/Sex/ARVDispense/HIVStatus") |> 
+  mutate(mech_code = as.double(mech_code)) |> 
+  # left_join(epic_ims, by = "mech_code") |> 
+  mutate(age50plus = case_when(ageasentered %in% fiftyplus ~ "50+",
+                               .default = "not 50+"),
+         age40plus = case_when(ageasentered %in% fourtyplus ~ "40+",
+                               .default = "not 40+"),
+         age40s = case_when(ageasentered %in% fourties ~ "40s",
+                               .default = "not 40s"),
+         ) |> 
+  group_by(funding_agency, mech_code, age50plus, age40plus, age40s, fiscal_year, indicator) |> 
+  summarise(values=sum(cumulative, na.rm = TRUE), .groups = "drop")
+
+```
+
+# HOW to add warnings and notes
+
+
+
+New enhanced function with 3 parts, integrating filter_scope()
+```{r functions_plus,  include=FALSE}
+
+filter_sum_values_by_agecat <- function (df, agecat, selected_funding_agency = NULL, selected_mech_type = NULL, keep_funding_agency = NULL) {
+
+    if (!is.null(selected_mech_type) & !is.null(selected_funding_agency)) {
+      df3 <- df |>
+      inner_join({{selected_mech_type}}, by = "mech_code") |> 
+      filter(funding_agency == {{selected_funding_agency}}) |> 
+      group_by({{agecat}}, fiscal_year, mech_type, funding_agency) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total),
+                          mech_type = "all mechs") |> ungroup() |>
+      filter(!str_detect(age, "^not"))
+      
+      message(str_c("age", unique(df3$age), "mech_type =", unique(df3$mech_type), "and funding_agency =", unique(df3$funding_agency), "values were specified and included in the output.", sep = " "))
+      
+        }
+    else if (!is.null(selected_funding_agency)) {
+      df3 <- df |>
+      filter(funding_agency == {{selected_funding_agency}}) |> 
+      group_by({{agecat}}, fiscal_year, funding_agency) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total),
+                          mech_type = "all mechs") |> ungroup() |>
+      relocate(c(mech_type, funding_agency), .before = values) |> 
+      filter(!str_detect(age, "^not"))
+      
+      message( str_c("age", unique(df3$age), "and funding_agency =", unique(df3$funding_agency), "values were specified and included in the output. \n  mech_type was not specified.", sep = " "))
+
+      
+         }
+    else if (!is.null(selected_mech_type) & !is.null(keep_funding_agency)) {
+      df3 <- df |>
+      inner_join({{selected_mech_type}}, by = "mech_code") |> 
+      group_by({{agecat}}, fiscal_year, mech_type, funding_agency) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total)) |> ungroup() |>
+      filter(!str_detect(age, "^not"))
+      
+      message( str_c("age", unique(df3$age), "mech_type =", unique(df3$mech_type), "values were specified. \n Funding agency was included in the output but not explicitly specified .", sep = " "))
+
+      
+      }
+    else if (!is.null(selected_mech_type)) {
+      df3 <- df |>
+      inner_join({{selected_mech_type}}, by = "mech_code") |> 
+      group_by({{agecat}}, fiscal_year, mech_type) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total)) |> ungroup() |>
+      filter(!str_detect(age, "^not"))
+      
+      message( str_c("age", unique(df3$age), "and mech_type  =", unique(df3$mech_type), "values were specified. \n funding_agency was neither specified nor included in the output.", sep = " "))
+
+      
+    }
+    else if (isTRUE(keep_funding_agency) 
+             # & is.null(keep_mech_type)
+             ) {
+      df3 <- df |>
+      group_by({{agecat}}, fiscal_year, funding_agency) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total),
+             mech_type = "all mechs") |> ungroup() |>
+      relocate(c(mech_type, funding_agency), .before = values) |> 
+      filter(!str_detect(age, "^not"))
+      
+      message( str_c("age", unique(df3$age), "was specified and funding_agency was kept but not specified. \n mech_type was neither specified nor included in the output.", sep = " "))
+      
+    }
+    
+    else {
+      df3 <- df |>
+      group_by({{agecat}}, fiscal_year) |>
+      summarise(values=sum(values, na.rm = TRUE), .groups = "drop") |>
+      rename_with(~ "age", 1) |>
+      group_by(fiscal_year) |>
+      mutate(total=sum(values, na.rm = TRUE),
+             proportion = scales::percent(values/total),
+             funding_agency = "PEPFAR",
+             mech_type = "all mechs") |> ungroup() |>
+      relocate(c(mech_type, funding_agency), .before = values) |> 
+      filter(!str_detect(age, "^not"))
+      
+      message(str_c("age", unique(df3$age), "was specified and included in the output. \n mech_type and funding_agency were neither specified nor included in the output.", sep = " "))
+
+    }
+  
+  return(df3)
+
+}
+```
+
+why can I not write an error message for agecat being missing or a string value? What workarounds are there? This is likely due to it's use naming a column rather than filtering or selecting an inner join.
+
+```{r}
+
+df <- plhiv_by_age |> 
+  filter_sum_values_by_agecat(agecat = age50plus)
+
+```
+
+# Function to rename based on selected values
+```{r}
+rename_df_shared_column_values <- function(df) {
+  # Find columns where all values are the same across all rows
+  all_same <- map_lgl(df, ~ length(unique(.x)) == 1)
+  
+  # Get names of columns with all same values, from the first 4 columns
+  same_value_cols <- names(df[1:4])[all_same]
+  
+  if (length(same_value_cols) > 0) {
+    # Concatenate values from same value columns and reverse the order
+    shared_value <- str_c(rev(df[1, same_value_cols]), collapse = "_")
+    df_name <- str_replace_all(
+                      str_to_lower(str_remove_all(shared_value, " ")),
+                      "\\+", "plus") # Construct dataframe name, removing all spaces, replacing + with plus
+    assign(df_name, df, envir = .GlobalEnv)  # Assign dataframe to the constructed name
+    message( str_c("Dataframe renamed to:", df_name, "\n", sep = " "))
+  } else {
+    message( str_c("No columns found where all values are the same across all rows. Default name 'output' used.\n", sep = " "))
+    assign("output", df, envir = .GlobalEnv)  # Assign dataframe to default name 'output'
+  }
+}
+
+rename_df_shared_column_values(df)
+```

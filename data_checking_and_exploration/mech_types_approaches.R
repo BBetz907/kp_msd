@@ -6,6 +6,7 @@ poc_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54F
 epic_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
                          sheet = 3) |> mutate(central_kp_mech = "Yes")
 
+epic_ims <- epic_input |> select(mech_code)  
 
 # append and input data frames   -----------------------
 input_2024_early <- poc_input |> 
