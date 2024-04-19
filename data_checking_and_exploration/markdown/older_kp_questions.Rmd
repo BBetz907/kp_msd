@@ -189,25 +189,60 @@ df <- plhiv_by_age |>
 # Function to rename based on selected values
 ```{r}
 rename_df_shared_column_values <- function(df) {
+  
   # Find columns where all values are the same across all rows
   all_same <- map_lgl(df, ~ length(unique(.x)) == 1)
   
   # Get names of columns with all same values, from the first 4 columns
   same_value_cols <- names(df[1:4])[all_same]
   
-  if (length(same_value_cols) > 0) {
-    # Concatenate values from same value columns and reverse the order
-    shared_value <- str_c(rev(df[1, same_value_cols]), collapse = "_")
-    df_name <- str_replace_all(
-                      str_to_lower(str_remove_all(shared_value, " ")),
-                      "\\+", "plus") # Construct dataframe name, removing all spaces, replacing + with plus
-    assign(df_name, df, envir = .GlobalEnv)  # Assign dataframe to the constructed name
-    message( str_c("Dataframe renamed to:", df_name, "\n", sep = " "))
-  } else {
-    message( str_c("No columns found where all values are the same across all rows. Default name 'output' used.\n", sep = " "))
-    assign("output", df, envir = .GlobalEnv)  # Assign dataframe to default name 'output'
-  }
-}
+  # Two divergent solutions follow
+          # First, where there is only 1 row, concatenate values from first 4 columns to construct df name
+      if (nrow(df) == 1) {
+        
+        shared_value <- str_c(rev(df[1:4]), collapse = "_")
+        df_name <- str_replace_all(
+                                    str_to_lower(str_remove_all(shared_value, " ")),
+                                    "\\+", "plus") # Construct dataframe name, removing all spaces, replacing + with plus
+        assign(df_name, df, envir = .GlobalEnv)  # Assign dataframe to the constructed name
+        message(str_c("Dataframe renamed to: ", df_name))
+        return(df)
+      }
+   
+          # Second, where there are multiple rows, concatenate values where there is a shared value to construct dataframe name
+      else if (length(same_value_cols) > 0) {
+      # Concatenate values from same value columns and reverse the order
+          shared_value <- str_c(rev(df[1, same_value_cols]), collapse = "_")
+          df_name <- str_replace_all(
+                                      str_to_lower(str_remove_all(shared_value, " ")),
+                                      "\\+", "plus") # Construct dataframe name, removing all spaces, replacing + with plus
+          assign(df_name, df, envir = .GlobalEnv)  # Assign dataframe to the constructed name
+          message( str_c("Dataframe renamed to:", df_name, "\n", sep = " "))
+          return(df)
 
-rename_df_shared_column_values(df)
+      }
+    else {
+      message( str_c("No columns found where all values are the same across all rows. Default name 'output' used.\n", sep = " "))
+      assign("output", df, envir = .GlobalEnv)  # Assign dataframe to default name 'output'
+    }
+}
 ```
+
+#apply function to create new data frames for selected data
+```{r}
+plhiv_by_age |> 
+  filter(fiscal_year==2024) |>
+  filter_sum_values_by_agecat(agecat = age50plus, selected_funding_agency = "DOD") |> rename_df_shared_column_values()
+
+plhiv_by_age |> filter(fiscal_year==2024) |> 
+  filter_sum_values_by_agecat(agecat = age50plus,selected_funding_agency = "USAID") |> rename_df_shared_column_values()
+
+```
+
+```{r}
+solution <- dod_allmechs_2024_50plus |> bind_rows(usaid_allmechs_2024_50plus) |> select(c(1,4,7)) |>  print()
+# solution_long <- dod_allmechs_2024_50plus |> bind_rows(usaid_allmechs_2024_50plus) 
+# solution_long[,c(1,4,7)]
+solution |> pivot_wider(names_from = age, values_from = proportion)
+```
+
