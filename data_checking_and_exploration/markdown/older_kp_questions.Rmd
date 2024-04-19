@@ -243,6 +243,6 @@ plhiv_by_age |> filter(fiscal_year==2024) |>
 solution <- dod_allmechs_2024_50plus |> bind_rows(usaid_allmechs_2024_50plus) |> select(c(1,4,7)) |>  print()
 # solution_long <- dod_allmechs_2024_50plus |> bind_rows(usaid_allmechs_2024_50plus) 
 # solution_long[,c(1,4,7)]
-solution |> pivot_wider(names_from = age, values_from = proportion)
+solution |> pivot_wider(names_from = funding_agency, values_from = proportion)
 ```
 
