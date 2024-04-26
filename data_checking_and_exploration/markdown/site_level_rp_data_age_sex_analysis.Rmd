@@ -1,0 +1,103 @@
+---
+title: "Older KP Analysis"
+author: "Bourke Betz"
+date: "2024-04-16"
+output: html_document
+---
+## Setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## Packages
+```{r, include=FALSE}
+library(tidyverse)
+library(gagglr)
+library(googlesheets4)
+
+load_secrets()
+```
+
+## Select data
+Data were downloaded and read from PEPFAR panorama
+```{r, include=FALSE}
+site_path <- "../Data/site-level/"
+pattern_latest <- glamr::return_latest(folderpath =  site_path, pattern = "Site_IM_FY2") |> 
+  str_extract("[0-9]{8}\\_v[0-9]\\_[0-9]")
+site_file_name <- list.files(path = site_path, pattern = pattern_latest) 
+select_site_file_paths <-  str_c(site_path, 
+                                 site_file_name[grepl("Asia\\sRegion|Hemisphere|Vietnam", site_file_name)]
+                                 )
+
+country2keep <- c("Burma", "Indonesia", "Laos", "Nepal", "Philippines", "Thailand", "Vietnam", "El Salvador", "Guatemala", "Honduras", "Nicaragua", "Panama")
+site_msd <- map_dfr(select_site_file_paths, ~gophr::read_psd(.x)) |> filter(country %in% country2keep)
+glimpse(site_msd)
+```
+
+```{r, include=FALSE}
+#Define age groups for analysis
+fiftyplus <- c("50+", "50-54", "55-59", "60-64", "65+")
+fourtyplus  <- c("40-44", "45-49", "50+", "50-54", "55-59", "60-64", "65+")
+fourties  <- c("40-44")
+# fourties  <- c("40-44", "45-49")
+
+```
+
+## Clean Data
+
+```{r data_prep, include=FALSE}
+site_msd_by_age_sex_long <-
+  site_msd |> 
+  filter(indicator %in% c("KP_PREV", "PrEP_NEW", "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "HTS_TST_POS", "TX_NEW"),
+         ) |> 
+  rename(fy = fiscal_year) |>  
+  # filter(indicator=="TX_CURR", !is.na(ageasentered), !standardizeddisaggregate == "Age/Sex/ARVDispense/HIVStatus") |> 
+  mutate(mech_code = as.double(mech_code),
+         age50plus = case_when(ageasentered %in% fiftyplus ~ "50+",
+                               !is.na(ageasentered) ~ "not 50+"),
+         age40plus = case_when(ageasentered %in% fourtyplus ~ "40+",
+                               !is.na(ageasentered) ~ "not 40+"),
+         age40s = case_when(ageasentered %in% fourties ~ "40s",
+                               !is.na(ageasentered) ~ "not 40s"),
+         keypop = case_when(str_detect(standardizeddisaggregate, "KeyPop") ~ otherdisaggregate_sub),
+         disagg = case_when(!is.na(ageasentered) & !is.na(sex) ~ "Age/Sex",
+                            !is.na(keypop) ~ "KP",
+                            str_detect(standardizeddisaggregate, "Total") ~ "Total")
+         ) |>  
+  filter(!is.na(disagg),
+         !(standardizeddisaggregate == "KeyPop/Status" & indicator == "KP_PREV")
+         ) |> 
+  select(-contains("qtr"), -contains("target"), -trendscoarse, -standardizeddisaggregate, -contains("age_"), -categoryoptioncomboname,
+         -contains("prioritization"), -source_name, -contains("otherdisaggregate"), -contains("status")) |>
+  relocate(cumulative, .after = disagg) |> 
+  relocate(fy, .after = indicator) |> 
+  group_by(across(orgunituid:disagg)) |> 
+  summarise(cumulative = sum(cumulative, na.rm = TRUE), .groups = "drop") 
+
+site_msd_by_age_sex_wide <- site_msd_by_age_sex_long |>  
+  pivot_wider(names_from = disagg, values_from = cumulative) |> 
+    clean_names() |> 
+  group_by(across(orgunituid:fy)) |> 
+  mutate(kp_proportion = sum(kp, na.rm = TRUE)/sum(total, na.rm = TRUE)) |> 
+  ungroup() 
+
+
+  
+site_msd_tot_kp <- site_msd_by_age_sex |> filter(disagg %in% c("KP", "Total")) |> 
+  # filter(country=="Nepal") |> 
+  select(-keypop, -contains("safe")) |> group_by(across(orgunituid:disagg)) |> 
+  summarise(cumulative = sum(cumulative, na.rm = TRUE), .groups = "drop") |> 
+  pivot_wider(names_from = disagg, values_from = cumulative, ) |> 
+  clean_names() |> 
+  filter(total != 0) |> 
+  mutate(kp_proportion = round(replace_na(kp/total, 0), digits = 2),
+         kp_percent = scales::percent(kp_proportion, accuracy = 1)) 
+```
+
+```{r}
+write_csv(site_msd_by_age_sex_long, "site_msd_by_age_sex_long.csv")
+write_csv(site_msd_by_age_sex_wide, "site_msd_by_age_sex_wide.csv")
+write_csv(site_msd_tot_kp, "site_msd_tot_kp.csv")
+```
+
