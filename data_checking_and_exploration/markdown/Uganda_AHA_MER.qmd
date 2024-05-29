@@ -1,0 +1,215 @@
+---
+title: "Uganda_site_level"
+format: html
+editor: visual
+---
+
+```{r}
+indicator_list <- c("PrEP_NEW", "HTS_TST")
+exclude_young <- c("01-04", "05-09", "01-09", "10-14", "<01", "<15")
+
+clean_number <- function(x, digits = 0){
+      dplyr::case_when(x >= 1e9 ~ glue("{round(x/1e9, digits)}B"),
+                       x >= 1e6 ~ glue("{round(x/1e6, digits)}M"),
+                       x >= 1e3 ~ glue("{round(x/1e3, digits)}K"),
+                       TRUE ~ glue("{x}"))
+    }
+
+# ug_file <- glamr::return_latest(folderpath =  "../Data/site-level", pattern = "Uganda")
+# mer_ug <- gophr::read_psd(ug_file)
+
+#create the analytic frame, adults males + msm/tg  
+
+
+```
+
+#isolate dataframe
+
+```         
+```
+
+```{r}
+ug_data <- mer_ug |>  
+  kp_setup() |> 
+  filter(!ageasentered %in% exclude_young,
+          standardizeddisaggregate != "Age/Sex/ARVDispense/HIVStatus",
+           indicator %in% indicator_list
+         ) |> 
+      mutate(indicator = factor(indicator, levels = indicator_list))  %>%
+      arrange(indicator) |>
+      # pivot to long format
+      pivot_longer(qtr1:qtr4, names_to = "qtr", 
+                   values_to = "results" )  %>%
+      mutate(results = coalesce(results, 0),
+         year = if_else(qtr == "qtr1", fy-1, fy),
+         qtr = str_replace(qtr, "qtr","Q"),
+         fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr),
+         month = recode(qtr, 
+                        "Q1" = "Oct",
+                        "Q2" = "Jan",
+                        "Q3" = "Apr",
+                        "Q4" = "Jul"),
+         period = str_c(month, as.character(year), sep = " "),
+         date = lubridate::parse_date_time(period, orders = "my") |> 
+           format("%b %Y"),
+         geo = case_when(sitetype == "Above Site" ~ psnu,
+                         sitetype == "Community" ~ community,
+                         sitetype == "Facility" ~ facility),
+         geo_uid = case_when(sitetype == "Above Site" ~ psnuuid,
+                         sitetype == "Community" ~ communityuid,
+                         sitetype == "Facility" ~ facilityuid),
+         geo_type = sitetype) 
+
+
+
+ugtgmsm <- ug_data %>%
+  filter(           keypop %in% c("MSM", "TG"),
+                    results >0) |> 
+  mutate(pop = "MSM & TG")
+
+ugm <- ug_data %>%
+  filter(sex == "Male",
+         results > 0
+         ) 
+
+#createa comparison analysis, adult females  
+ugf <-  ug_data |> 
+  filter(sex == "Female",
+         results > 0
+         ) |> 
+  mutate(pop = "Adult Females")
+```
+
+identify orgunits (site, community, psnu where MSM and TG results were reported)
+
+```{r}
+ugeo_pre <- ugtgmsm |> filter(fy<= 2023) |> 
+  mutate(geo = case_when(sitetype == "Above Site" ~ psnu,
+                         sitetype == "Community" ~ community,
+                         sitetype == "Facility" ~ facility),
+         geo_uid = case_when(sitetype == "Above Site" ~ psnuuid,
+                         sitetype == "Community" ~ communityuid,
+                         sitetype == "Facility" ~ facilityuid),
+         geo_type = sitetype) |> 
+  count(geo_type, geo_uid, geo) |> select(-n, -geo)
+
+ugeo_pre |> count(geo_type)
+
+#identify high concentrations of KP (>10%, for multiple quarters)
+proportion <- 0.2
+ug_msm_tg_focused <- ug_data %>%
+  filter(           otherdisaggregate %in% c("MSM", "TG") | sex == "Male",
+                    results >0) |>   
+  inner_join(ugeo_pre, by = c("geo_uid", "geo_type")) |> 
+  # mutate(kp_perc = msmtg/male) |> 
+  # filter(kp_perc >= proportion) |> 
+  # count(facilityuid, geo_uid, indicator, fyq) |> 
+  # filter(n>=1) |>  
+  count(geo_uid) 
+# |> 
+#   filter(n>=4) |> 
+#   mutate(kp_focused_facility = TRUE) |> 
+#   select(-n) |>
+#   print()
+
+
+ugeo <- ugeo_pre |> inner_join(ug_msm_tg_focused)
+```
+
+```{r}
+ugm_kp_orgunits <- ugm |> 
+  inner_join(ugeo, by = c("geo_uid", "geo_type")) |> 
+  mutate(pop = "Adult Males reported by facilities that historically reported MSM & TG results") 
+
+ugm_nonkp_orguits <- ugm |> 
+  anti_join(ugeo, by = c("geo_uid", "geo_type"))|> 
+  mutate(pop = "Adult Males reported by facilities that did NOT historically report MSM & TG")
+
+   
+  # mutate(kp_percent = 100*round(replace_na(msmtg/male,0),4)) |> 
+  # arrange(desc(kp_percent))
+```
+
+```{r}
+library(glue)
+ug <- ugm_kp_orgunits |> 
+  # filter(kp_focused_facility == TRUE) |>
+  # mutate(pop = pop2) |> 
+  bind_rows(ugf, ugm_nonkp_orguits, ugtgmsm) |> 
+  group_by(country, indicator, pop, period, fy, fyq, date) |> 
+  summarise(value = sum(results, na.rm = TRUE), .groups = "drop") |> 
+  filter(value > 0) |> 
+    mutate(
+            bar_color = case_when(pop == "Adult Males reported by facilities that historically reported MSM & TG results" ~ "dark grey",
+        TRUE ~ "light grey"),
+      point_color = case_when(pop == "Adult Males reported by facilities that historically reported MSM & TG results" ~ "grey"),
+    
+    qtr = as.double(str_extract(fyq, "[1-4]$"))  ) |> 
+    group_by(indicator, pop) |>
+    mutate(lag_value = lag(value, 1, order_by = fyq)) |>
+    ungroup() |> 
+    arrange(indicator, pop, fyq) |> 
+    mutate(pct_change = (value - lag_value ) / lag_value,
+           pct_previous = value / lag_value) |> 
+  filter(!pop == "MSM & TG") |> 
+  mutate(full_lab = 
+           glue("{clean_number(value)}\n ({scales::percent(pct_change, 1)})")) |> 
+    print()
+
+
+
+```
+
+```{r}
+custom_colors <- c("dark_grey" = "#5d5e60", "light grey" = trolley_grey_light)
+
+plot <- ug  %>% filter(!is.na(lag_value),
+                       fy >= 2023 | fyq == "FY22 Q4") |> 
+  ggplot(aes(x = date, y = pct_previous, color = bar_color,
+             group = pop )) +
+  geom_line() +
+  # geom_line(data = . %>% filter(pop == "MSM & TG"), size = 2, color = burnt_sienna_light) +
+  geom_point(data = . %>% filter(pop == "Adult Males reported by facilities that historically reported MSM & TG results"), 
+             aes(fill = "#5d5e60"), size = 1.5, alpha = 1) +
+  facet_grid(rows = vars(indicator), 
+             # scales = "free_y", 
+             switch = "y") +
+  geom_text(data = . %>% filter(pop == "Adult Males reported by facilities that historically reported MSM & TG results"), aes(label = full_lab), 
+            # vjust = -0.5
+            ) +
+    # geom_text(data = . %>% filter(pop == "Adult Males reported by facilities that historically reported MSM & TG results"), aes(label = scales::percent(pct_change, accuracy = 1)), vjust = 1.5) +
+    # geom_text(data = . %>% filter(pop == "MSM & TG"), aes(label = scales::comma(value)), vjust = 1, color = burnt_sienna) +
+  scale_y_continuous(label = scales::label_number(scale_cut = cut_short_scale()), 
+                     # limits = c(0.65, 1.35)
+                     ) +
+  scale_color_manual(values = custom_colors) +
+  scale_fill_manual(values = custom_colors) +
+  si_style_xline() +
+  labs(x = NULL, y = NULL,
+       title = glue::glue("Trends across clinical indicators (percent of previous period)" %>% toupper()),
+       subtitle = glue::glue("Results shown for adult males reported by facilities who historically reported MSM & TG results.
+       Comparisons shown versus adult females and males reported by facilities that did NOT historically report MSM & TG results.
+                             Country of Interest: Uganda"
+
+                             ),
+       caption = glue("Source: FY24Q1c
+                      Note: Uganda stopped reporting on Key Population disaggregates after March 2023")
+       ) +
+  theme(axis.text.y = element_blank(),
+        legend.position = "none",
+        strip.text.y.left = element_text(angle=360)) +
+  geom_line(aes(y=1), alpha = 0.5, color = trolley_grey_light, linetype = "dashed")
+
+plot
+
+
+
+ggsave("../Images/Uganda/plot2.png", plot = last_plot(), height = 4.5*1.5, width = 8*1.5)
+```
+
+```{r}
+ug |> 
+   mutate(date = lubridate::parse_date_time(period, orders = "my") |>
+            format("%b %Y")) |> 
+  count(fyq, date, period)
+```

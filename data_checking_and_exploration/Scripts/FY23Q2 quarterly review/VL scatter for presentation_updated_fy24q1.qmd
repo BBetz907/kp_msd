@@ -1,0 +1,114 @@
+---
+title: "VL scatter for presentation"
+format: html
+editor: visual
+---
+
+```{r}
+vl_indicators <- c("TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
+nonreporters <- c( "Liberia", "PNG")
+`%nin%`  <- Negate(`%in%`)
+
+vl_gp_kp <- qcheck %>%
+  filter((fy==2023 & qtr == "Q3") | (fy==2024 & qtr == "Q1") ,
+         country %nin% nonreporters,
+         indicator %in% vl_indicators,
+         funding_agency=="USAID",
+         ) %>% 
+  group_by(country, fy, disagg, indicator, funding_agency) %>%
+  summarise(results = sum(results), .groups = "drop") %>%
+  mutate(indicator = as.character(indicator))
+
+vl_kp <- vl_gp_kp %>% filter(disagg == "KP") %>%  select(-funding_agency)
+  
+
+vl_gp <- vl_gp_kp %>% 
+  mutate(results = if_else(disagg ==  "KP", -results, results)) %>%
+  group_by(fy, country, indicator) %>%
+  summarise(results = sum(results, na.rm = TRUE), .groups = "drop") %>%
+  mutate(disagg = "GP") %>% 
+  select(country, disagg, indicator, fy, results)
+
+
+vl_gpkp_pre <- bind_rows(vl_kp, vl_gp)
+
+vlc_d_kpgp <- vl_gpkp_pre %>% filter(fy == 2023, indicator=="TX_CURR") %>% 
+  mutate(fy = 2024,
+         indicator = "TX_CURR_Lag2") #adapted for Q2
+  
+  
+vl_gpkp <- vl_gpkp_pre %>% filter(indicator != "TX_CURR", fy != 2023) %>%
+  bind_rows(vlc_d_kpgp) %>%
+  pivot_wider(values_from = results, names_from = indicator) %>%
+  mutate(vlc = TX_PVLS_D/TX_CURR_Lag2,
+         vls = TX_PVLS_N/TX_PVLS_D,
+         country = fct_reorder(country, desc(country)),
+         across(TX_PVLS_D:vls, ~replace_na(.x, 0)),
+         ) 
+
+
+vl_plot <- vl_gpkp %>% select(country, disagg, fy, vlc) %>% 
+  mutate( fystr = as.character(fy),
+          vlc = if_else(vlc>1, 1, vlc),
+          country = str_replace(country, "Democratic Republic of the Congo", "DRC"),  country = str_replace(country, "Dominican Republic", "DR"),
+           country = str_replace(country, "Cote d'Ivoire", "CDI")) %>%
+  filter(vlc!=0) %>%
+  pivot_wider(names_from = disagg, values_from = vlc, names_prefix = "VLC_") %>% 
+  mutate(VLC_KP = if_else(country == "Malawi", 0.76, VLC_KP),
+         VLC_KP = if_else(country == "Philippines", 0.65, VLC_KP),
+         VLC_GP = if_else(country == "Philippines", 0.45, VLC_GP),
+    country2 = case_when(VLC_KP <0.95 ~ country),
+         mark2 = if_else(VLC_KP >= 0.95, "a", "b"),
+        country3 = case_when(VLC_KP >=0.95 ~ country),
+         mark3 = if_else(VLC_KP >= 0.95, "a", "b")
+    ) %>% 
+  glimpse()
+
+vl_plot %>% filter(country == "Malawi") %>% glimpse()
+```
+
+```{r}
+positive_threshold <- 0.85
+disparity_threshold <- 0.95
+
+vl_plot %>%
+  select(-contains("mark"), -country2, -country3) |> 
+  mutate(VLC_GP = case_when(VLC_KP >= (0.24 + VLC_GP) ~  -0.24 + VLC_KP, #ADJUST OUTLIERS ON THE POSITIVE SIDE FOR KP
+                            VLC_KP <= -0.4 + VLC_GP ~ 0.34 + VLC_KP, #ADJUST OUTLIERS ON THE Negatove SIDE FOR KP
+                            is.na(VLC_GP) & !is.na(VLC_KP) ~ VLC_KP,
+                            TRUE ~ VLC_GP),
+          mark_color = case_when(VLC_KP >= positive_threshold ~ "high",
+                                VLC_KP < disparity_threshold*VLC_GP ~ "gap",
+                                TRUE ~ "default")) |> 
+  ggplot(aes(y=VLC_KP, x = VLC_KP - VLC_GP)) + 
+  geom_point(aes(color=mark_color), show.legend = FALSE) + 
+  # geom_text(data = . %>% filter(VLC_KP < disparity_threshold*VLC_GP),
+            # data = . |> filter(VLC_KP < 0.95*VLC_GP),
+    # aes(label = country), size=3, position = position_nudge(x = -.005, y=.00), hjust = 1, color = old_rose) +
+  scale_color_manual(values = c("default" = trolley_grey, "gap" = old_rose, "high" = scooter)) + 
+  
+  labs(x = "Difference between USAID KP and GP VL COVERAGE", y = "USAID KP VL COVERAGE", title = "USAID KP Viral Load Coverage in comparison to the General Population",
+       subtitle = str_wrap("2/3 of countries who report KP VLC fall below 85%, and half of these have lower KP VLC than the General Population")) + 
+  
+  si_style_xyline() + 
+  scale_y_continuous(labels = scales::percent, breaks = c(0.25, 0.4, 0.55, 0.7, 0.85, 1)) +   
+  scale_x_continuous(labels = scales::percent, limits = c(-0.4, 0.25), breaks = c(-0.4, -0.2, 0, 0.20)) +
+  
+  annotate("rect", xmin = -.4, xmax = 0.25, ymin = positive_threshold, ymax = 1.08, alpha = .1,fill = scooter) +  
+  annotate("rect", xmin = -.4, xmax = -.05, ymin = 0.18, ymax = positive_threshold, alpha = .1,fill = old_rose) + 
+  # annotate("rect", xmin = -.6, xmax = -.1, ymin = 0.9, ymax = 1.08, alpha = .1,fill = golden_sand) +   
+  annotate("rect", xmin = -.05, xmax = 0.25, ymin = 0.18, ymax = positive_threshold, alpha = .1,fill = burnt_sienna) + 
+  annotate("text", x = .1, y = 0.22, label = "Low VLC for KP and GP", size =3.5, color = burnt_sienna, fontface = "bold") + 
+  annotate("text", x = -.225, y = 0.22, label = "Low VLC for KP and Equity Gaps", size =3.5, color = old_rose, fontface = "bold") + 
+  # annotate("text", x = -.35, y = 1.05, label = "Disparity but medium KP VLC", size =3.5) + 
+  annotate("text", x = -0.05, y = 1.05, label = "High KP VLC", size =3.5, color = scooter, fontface = "bold")
+
+  
+ggsave("../../Images/kp_vlc_gap_fy24q1.png", width = 7, height = 6)
+```
+
+```{r}
+vl_plot |> filter(VLC_KP >= positive_threshold) |> print(n=11)
+
+```
+

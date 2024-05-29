@@ -6,12 +6,11 @@ poc_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54F
 epic_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
                          sheet = 3) |> mutate(central_kp_mech = "Yes")
 
-epic_ims <- epic_input |> select(mech_code)  
 
-# append and input data frames   -----------------------
+# append and input data frames input from different sources 2024 inputs  -----------------------
 input_2024_early <- poc_input |> 
       # exclude EpiC from USAID POC input
-  anti_join(epic_input, by = "mech_code") |> 
+  anti_join(epic_input, by = "mech_code", "country") |> 
       # append now that EpiC IMs will not be duplicated
   bind_rows(epic_input) |> 
   mutate(type = case_when(
@@ -26,26 +25,36 @@ glimpse(input_2024_early)
   
 # qa/qc --------------------
 
-previous_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
-                        sheet = 1) |> select(-`FY of origin`)
 
-previous_input |> inner_join(input_2024_early, by = "mech_code")
+#read previous inputs. Keep unduplicated, discard previous data
+## change to sehet 1 for future
+previous_input <- read_sheet("https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=1942630497",
+                        sheet = 5) |> select(-`FY of origin`) |> 
+  mutate(country = recode(country, 
+                          "DR" = "Dominican Republic",
+                          "DRC" = "Democratic Republic of the Congo",
+                          "PNG" = "Papua New Guinea"
+                          ))
+
 
 # export --------------------
-input2add <- input_2024_early |> select(
-  # group ~ TX approach
-  country, mech_code, 
-  # focus ~ KP, INTEGRATED, ETC.
-  type
-)
+new_input2add <- input_2024_early |>
+  rename(focus = `focus (predicted based on MER data reported)`) |> 
+  select(
+  # group ~ TX approach 
+  country, mech_code, focus,  type
+) 
 
-# archive current sheet 1
-sheet_write(data = previous_input, 
-            ss = "https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
-            sheet = 5)
+previous_input_keep <- previous_input |> anti_join(new_input2add, by = c("mech_code", "country"))
+
+updated_mech_list <- new_input2add |> bind_rows(previous_input_keep) |> 
+  relocate(group, .before = country) |> 
+  count(group, country, mech_code, focus, type) |> select(-n) 
+
+# updated_mech_list |> count(country, mech_code) |> filter(n>1)
 
 
 # move new data to sheet 1
-sheet_write(data = input2add, 
+sheet_write(data = updated_mech_list, 
             ss = "https://docs.google.com/spreadsheets/d/1G3K5rXeU54FN54FehPa6LCsJLnAx0rD5aVtrJ5ys-hw/edit#gid=797015621",
-            sheet = 5)
+            sheet = 1)
