@@ -133,12 +133,14 @@ grabr::pano_download(item_url = url_archived_msd, session = sess)
 
 site_items <- mer_items |> filter(item == "Site Level") |> pull(path)
 
+select_urls <- pano_items(site_items) |> filter(str_detect(item, "Cote|Malawi")) |> pull(path) |> print()
 regional_site_urls <- pano_items(site_items) |> filter(str_detect(item, "Region|Vietnam")) |> pull(path) |> print()
 
 uganda_site_url <- pano_items(site_items) |> filter(str_detect(item, "Uganda"))|> pull(path) |> print()
 
 dest_path_site2 <- paste0(si_path(),"/site-level/")
 
+map(select_urls, ~grabr::pano_download(item_url = .x, session = sess, dest = dest_path_site2))
 map(regional_site_urls, ~grabr::pano_download(item_url = .x, session = sess, dest = dest_path_site2))
 grabr::pano_download(item_url = uganda_site_url, session = sess, dest = dest_path_site2)
 # grabr::pano_download(item_url = regional_site_urls[4], session = sess, dest = dest_path_site2)
