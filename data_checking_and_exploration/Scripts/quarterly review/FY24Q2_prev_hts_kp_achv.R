@@ -188,16 +188,16 @@ df_achv_viz %>%
   geom_point(aes(x=baseline_pt_4), shape = 3, color = "#D3D3D3") +
   geom_point(aes(x=baseline_pt_5), shape = 3, color = "#D3D3D3") +
   geom_jitter(
-    aes(shape = funding),
+    # aes(shape = funding),
     position = position_jitter(width = 0, height = 0.1), na.rm = TRUE,
               alpha = .7, size = 3) + 
-  geom_point(aes(global_achv), size = 10, alpha = 1, na.rm = TRUE, 
-             position=position_nudge(y=0.3)) +
+  geom_point(aes(global_achv), size = 12, alpha = 1, na.rm = TRUE, 
+             position=position_nudge(y=0.4)) +
   geom_text(aes(global_achv, label = percent(global_achv, 1)), na.rm = TRUE,
-            position=position_nudge(y=0.3),
-            color = "#202020", family = "Source Sans Pro", size = 10/.pt) +
+            position=position_nudge(y=0.4),
+            color = "#000000", family = "Source Sans Pro", size = 12/.pt) +
   coord_cartesian(clip = "off") + # default decides how much to show - expands padding
-  scale_x_continuous(limit=c(0,1.1),oob=scales::squish, breaks = seq(0, 1.25, .25), label = percent_format(1)) + #capping achievement at 110
+  scale_x_continuous(limit=c(0,1.1),oob=scales::squish, breaks = seq(0, 1.1, .5), label = percent_format(1)) + #capping achievement at 110
   scale_color_identity(guide=guide_legend(direction = "horizontal", title.position = "top",
                                           title.hjust = 0), 
                        breaks=c("#f8a27e", "#fbdc99","#5BB5D5","#697ebc"),
@@ -208,22 +208,31 @@ df_achv_viz %>%
   ) +    
   facet_wrap(~ind_w_glob_vals, scales = "free_y", nrow=3) +
   labs(x = NULL, y = NULL,
-       title = glue("{metadata$curr_pd} KP achievement, USAID") %>% toupper,
+       title = glue("USAID {metadata$curr_pd} KP achievement"), # %>% toupper,
        subtitle = glue("Global KP achievement (large, labeled points)<br>with country achievement reference points"),
-       caption = glue("Target achievement capped at 110%.
+       caption = glue("Target achievement capped at 110%
                       Source: {metadata$source} | Ref ID: {ref_id}")) +
   si_style_nolines() +
   theme(
     axis.text.x = element_blank(),
+    # axis.text.x = element_text(colour = grey30k),
     axis.text.y = element_blank(),
-    plot.subtitle = element_markdown(),
+    plot.margin = unit(c(1, 3, 1, 1), "cm"),  # Add space to the right (top, right, bottom, left)
+    plot.caption = element_text(hjust = 0.8, size = 11),     # Right-justify the caption
+    plot.title = element_markdown(size=18),
+    plot.subtitle = element_markdown(size = 12),
     panel.spacing.y = unit(0, "lines"),
     strip.text = element_markdown(),
-    legend.position="bottom"
-    # legend.direction = "horizontal"
-    ) + guides(color = guide_legend(override.aes = list(size = 4.5)))
+    legend.position="bottom",
+    # legend.position = c(0, -.2),                 # Move the legend to the bottom left
+    legend.justification = c(0.3, 0),             # Align the legend to the bottom left corner
+    legend.title = element_blank(),
+    legend.text = element_text(size=9),
+    legend.direction = "horizontal",
+    ) + 
+  guides(color = guide_legend(override.aes = list(size = 4)))
 
 
 # si_save(glue("Graphics/{metadata$curr_pd}_achv_ou.svg"))
-si_save(glue("Images/FY{curr_fy}Q{curr_qtr}_achv_ou.png"), width = 4, height = 4.5)
-si_save(glue("Images/FY{curr_fy}Q{curr_qtr}_achv_ou_forleg.png"), width = 5, height = 5)
+si_save(glue("Images/FY{curr_fy}Q{curr_qtr}_achv_ou.png"), width = 4, height = 7)
+# si_save(glue("Images/FY{curr_fy}Q{curr_qtr}_achv_ou_forleg.png"), width = 5, height = 5)
