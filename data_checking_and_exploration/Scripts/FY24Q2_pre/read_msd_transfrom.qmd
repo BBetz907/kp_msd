@@ -76,7 +76,7 @@ kp_clean <- function(df, time = NULL, focus = NULL) {
                # create alternative for q2 or q3 when targets from COP shift this)
                  ) %>%
       # select fields relevant for quarterly analysis, excluding cumulative and targets
-      select(operatingunit, country, snu1, psnu, partner, mech_code, 
+      select(operatingunit, country, contains("snu"), partner, mech_code, 
              mech_name, indicator, funding_agency, numeratordenom, 
              disagg, otherdisaggregate, sex, ageasentered, 
              standardizeddisaggregate, otherdisaggregate, keypop, 
@@ -100,7 +100,7 @@ kp_clean <- function(df, time = NULL, focus = NULL) {
             cumulative = coalesce(cumulative, 0),
             targets = coalesce(targets, 0),
          ) |> 
-         select(operatingunit, country, snu1, psnu, partner, 
+         select(operatingunit, country, contains("snu"), partner, 
                 mech_code, mech_name, indicator, funding_agency, 
                 numeratordenom, disagg, standardizeddisaggregate, 
                 safe_for_net_new, safe_for_vlc, sex, ageasentered,
@@ -124,7 +124,7 @@ kp_clean <- function(df, time = NULL, focus = NULL) {
         partner = prime_partner_name,
         fy = fiscal_year,
         arv = str_extract(otherdisaggregate, "(?<=-\\s).+")) |> 
-  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, standardizeddisaggregate, arv, otherdisaggregate, fy, targets, cumulative)
+  select(operatingunit, country, contains("snu"), partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, standardizeddisaggregate, arv, otherdisaggregate, fy, targets, cumulative)
     } else if (focus == "modality") {
       df2 <- df |> 
         filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
@@ -136,7 +136,7 @@ kp_clean <- function(df, time = NULL, focus = NULL) {
           fy = fiscal_year,
           fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr),
           age = trendscoarse) %>%
-      select(operatingunit, country, snu1, psnu, prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom,
+      select(operatingunit, country, contains("snu"), prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom,
              standardizeddisaggregate, modality, fy, fyq, results, age, ageasentered, sex)
     }  else {
       stop("Invalid value for 'focus'. Please set 'mmd' or 'modality' for focus")
