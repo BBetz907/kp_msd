@@ -108,7 +108,7 @@ check %>%
   group_by(keypop) %>% 
   summarise(cumulative = sum(cumulative), targets = sum(targets), 
             .groups="drop") %>%
-  mutate(positivity = scales::percent(cumulative/targets, accuracy = 0.1),
+  mutate(ach = scales::percent(cumulative/targets, accuracy = 0.1),
          ) %>%
   print()
 ```

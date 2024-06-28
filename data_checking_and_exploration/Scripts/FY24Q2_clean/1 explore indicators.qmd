@@ -115,7 +115,7 @@ oneA_by_agency <- check %>% filter(funding_agency %in% c("USAID"),
 
 ```{r}
 oneA_by_agency <- check %>% filter(funding_agency %in% c("USAID", "CDC", "Dedup"),
-                             disagg == "KP", fy == 2023, country!= "Ukraine") %>%
+                             disagg == "KP", fy == 2024, country!= "Ukraine") %>%
   group_by(funding_agency, indicator, disagg, fy) %>%
   summarise(sum.cum=sum(cumulative), sum.targets=sum(targets)) %>%
   mutate(ach = sum.cum/sum.targets) %>% 
@@ -157,13 +157,13 @@ trends_by_q %>% ggplot(aes(x=fyq, color=indicator)) +
 
 ```
 
-### 1D -  clean for USAID, something missing for CDC
+### 1D - clean for USAID, something missing for CDC
 
 ```{r}
 trends_by_a <- qcheck %>%
   filter(disagg=="KP",
         indicator=="TX_CURR",
-        # funding_agency == "USAID",
+        funding_agency == "USAID",
         # country %in% c("Uganda", "Tanzania"),
          fy >= 2023
          ) %>%

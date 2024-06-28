@@ -1,9 +1,10 @@
-# PROJECT:  from groundhogday
-# AUTHOR:   B Betz, adapted from A.Chafetz, N.Petrovic, K.Srikanth | USAID
-# PURPOSE:  FY24Q2 KP prevention and testing indicators target achv
-# REF ID:   3hdfjkh573
+# PROJECT:  groundhogday
+# AUTHOR:   A.Chafetz, N.Petrovic, K.Srikanth | USAID
+# PURPOSE:  FY24Q2 prevention indicators target achv
+# REF ID:   3adb8fa1 
 # LICENSE:  MIT
-# DATE:  2024-06-17
+# DATE:  2024-05-29
+# NOTE:     Adapted from rebootTZ FY21Q3 partner revide; Updated for FY23Q4 
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -27,20 +28,25 @@ library(ggrepel)
 
 load_secrets()
 
-ref_id <- "3hdfjkh573" #id for adorning to plots, making it easier to find on GH
+ref_id <- "3adb8fa1" #id for adorning to plots, making it easier to find on GH
 
 merdata <- file.path(glamr::si_path("path_msd"))
 file_path <- return_latest(folderpath = merdata,
                            pattern = "OU_IM_FY22")
 
 #select indicators
-ind_sel <- c("KP_PREV", "PrEP_NEW", "HTS_TST_POS", "TX_CURR", "TX_PVLS_D", "TX_PVLS")
-disagg_sel <- c("KeyPop/Result", "KeyPop", "KeyPopAbr", "HIVStatus")
-semi_annual <- c("KP_PREV")
+ind_sel <- c("HTS_TST","HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS", 
+             "PrEP_NEW", "VMMC_CIRC", "OVC_SERV", "KP_PREV", "GEND_GBV", "AGYW_PREV_D", "AGYW_PREV", "PMTCT_EID", "TB_PREV")
+
+semi_annual <- c("OVC_SERV", "KP_PREV", "GEND_GBV", "AGYW_PREV_D", "AGYW_PREV",  "TB_PREV")
+#Please include GEND_GBV @ Q2 and Q4 when new data is available so we can highlight programs providing HIV prevention to those reporting GBV to PEPFAR supported facilities. 
+#Responding to gender inequities and violence faced by these populations is an essential component of effective HIV prevention.
+#Monitoring this indicator is valuable to help the office to better understand preventative efforts and their impact in these populations.
  
 
+
 #caption info for plotting
-metadata <- get_metadata(file_path, caption_note = "US Agency for International Development")
+metadata<- get_metadata(file_path, caption_note = "US Agency for International Development")
 
 #current FY and quarter
 curr_fy <- metadata$curr_fy
@@ -64,15 +70,16 @@ df <- read_psd(file_path)
 #subset to key indicators
 
 df_achv <- df %>% 
-  clean_indicator() %>%
+  clean_indicator() %>% 
   #rowwise() %>% 
   #mutate(TX_IIT= sum(TX_ML_IIT_less_three_mo, TX_ML_IIT_more_three_mo, na.rm = T)) %>% 
   #ungroup() %>%
   filter(funding_agency == "USAID",
          !operatingunit %in% c("Ukraine"), #exclude TZA and NGA globally for FY23Q4 because of DQA issues 
          fiscal_year == curr_fy,
-         indicator %in% ind_sel,
-         standardizeddisaggregate %in% disagg_sel)
+         indicator %in% ind_sel) |> 
+  filter(str_detect(indicator, "AGYW")) |> 
+  count(indicator)
 
 #remove known issues
 
@@ -84,7 +91,7 @@ df_achv <- resolve_knownissues(df_achv)
 df_achv <- df_achv %>% 
   bind_rows(df_achv %>% 
               mutate(country = "GLOBAL")) %>% 
-  # filter(standardizeddisaggregate %in% c("Total Numerator", "Total Denominator")) %>% 
+  filter(standardizeddisaggregate %in% c("Total Numerator", "Total Denominator")) %>% 
   group_by(fiscal_year, country, indicator) %>% 
   summarize(across(c(targets, cumulative), \(x) sum(x, na.rm = TRUE)), 
             .groups = "drop")
@@ -131,8 +138,8 @@ df_achv_viz <- df_achv %>%
 
 df_achv_viz <- df_achv_viz %>% 
   mutate(indicator_ss = ifelse(indicator %in% snapshot_ind, paste(indicator, "(SS)"), indicator),
-         ind_w_glob_vals = case_when(country == "GLOBAL" & is.na(targets) ~ glue::glue("**{indicator_ss}**<br><span style = 'font-size:11pt;'>No MER reporting</span>"),
-                                     country == "GLOBAL" ~ glue::glue("**{indicator_ss}**<br><span style = 'font-size:11pt;'>{clean_number(cumulative)} / {clean_number(targets)}</span>")),
+         ind_w_glob_vals = case_when(country == "GLOBAL" & is.na(targets) ~ glue("**{indicator_ss}**<br><span style = 'font-size:11pt;'>No MER reporting</span>"),
+                                     country == "GLOBAL" ~ glue("**{indicator_ss}**<br><span style = 'font-size:11pt;'>{clean_number(cumulative)} / {clean_number(targets)}</span>")),
          indicator = factor(indicator, levels = ind_sel)) %>% 
   group_by(indicator) %>% 
   fill(ind_w_glob_vals, .direction = "downup") %>% 
@@ -140,22 +147,18 @@ df_achv_viz <- df_achv_viz %>%
   arrange(indicator) %>% 
   mutate(ind_w_glob_vals = fct_inorder(ind_w_glob_vals)) 
 
-df_achv_viz |> count(ind_w_glob_vals)
-df_achv_viz |> count(indicator_ss)
-df_achv_viz |> count(indicator)
 
+df |> count(indicator)
 # VIZ - ACHIEVEMENT GLOBAL -------------------------------------------------------
 
 
 #@TO-DO: need to find a way to make this dynamic between quarters
 lab_q4<-c("<75%","75-89%","90-110%","+110%")
 
-lab_leg<- case_when(
-                   # metadata$curr_qtr==1 ~  c("<15%","15-35%",">35%"),
+lab_leg<-case_when(metadata$curr_qtr==1 ~  c("<15%","15-35%",">35%"),
                    metadata$curr_qtr==2 ~  c("<25%","25-40%","40-60%",">60%"),
-                   # metadata$curr_qtr==3 ~  c("<50%","50-65%","65-85%",">85%"),
-                   # TRUE ~ c("<75%","75-89%","90-110%","+110%")
-                   )%>%
+                   metadata$curr_qtr==3 ~  c("<50%","50-65%","65-85%",">85%"),
+                   TRUE ~ c("<75%","75-89%","90-110%","+110%"))%>%
   ## NOTE: Will need to add Q2, Q3, Q4 late,
   # metadata_msd$curr_qtr==3 ~  c("<75%","75-89%","90-110%","+110%"),
   # metadata_msd$curr_qtr==4 ~  c("<75%","75-89%","90-110%","+110%")) %>%
@@ -182,7 +185,7 @@ df_achv_viz %>%
                                           title.hjust = 0), breaks=c("#ff939a","#ffcaa2","#5BB5D5","#e6e6e6"),
                        labels=lab_leg,
                        name="Achievement: Cumulative indicators | Snapshot indicators") + #whatever value is defined by color -- use that value from data frame
-  facet_wrap(~ind_w_glob_vals, ncol = 1, scales = "free_y") +
+  facet_wrap(~ind_w_glob_vals, nrow=2, scales = "free_y") +
   labs(x = NULL, y = NULL,
        title = glue("{metadata$curr_pd} Global Achievement, USAID") %>% toupper,
        caption = glue("Target achievement capped at 110%
@@ -225,20 +228,20 @@ df_achv_viz %>%
   scale_color_identity(guide=guide_legend(direction = "horizontal", title.position = "top",
                                           title.hjust = 0), breaks=c("#f8a27e", "#FBDC99","#5BB5D5","#697EBC"),
                        labels=lab_leg,
-                       name="Achievement: Cumulative indicators | Snapshot indicators") +    
-  facet_wrap(~ind_w_glob_vals, scales = "free_y", nrow=1) +
+                       name="Achievement: Cumulative indicators | Snapshot indicators") +    facet_wrap(~ind_w_glob_vals, scales = "free_y", nrow=2) +
   labs(x = NULL, y = NULL,
        title = glue("{metadata$curr_pd} Operating Unit achievement, USAID ") %>% toupper,
        subtitle = glue("Global achievement (large, labeled points) with OU achievement reference points <br>"),
        caption = glue("Target achievement capped at 110%
-                        Source: {metadata$source} | Ref ID: {ref_id}")) +
+                        Source: {metadata$source} | USAID/OHA/SIEI | Ref ID: {ref_id}")) +
   si_style_nolines() +
   theme(
     axis.text.x = element_blank(),
     axis.text.y = element_blank(),
     plot.subtitle = element_markdown(),
+    strip.text = element_markdown(),
     panel.spacing.y = unit(0, "lines"),
     legend.position="bottom")
 
-# si_save(glue("Graphics/{metadata$curr_pd}_achv_ou.svg"))
-si_save(glue("Images/FY{curr_fy}Q{curr_qtr}_achv_ou.png"), width = 8, height = 4)
+si_save(glue("Graphics/{metadata$curr_pd}_achv_ou.svg"))
+si_save(glue("Images/FY{curr_fy}Q{curr_qtr}_achv_ou.png"))

@@ -15,7 +15,7 @@ pvls_trends_country <- qcheck %>% filter(
   disagg == "KP", 
   fy == 2024,
   funding_agency == "USAID",
-  !country %in% c("Liberia","Papua New Guinea", "PNG"),
+  !country %in% c("Liberia","Papua New Guinea", "PNG", "Uganda", "Nigeria"),
   indicator %in% vl_indicators) %>%
   group_by(fyq, disagg, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>% print()

@@ -4,9 +4,9 @@ format: html
 editor: visual
 ---
 
-### 2a,cd
+### 2a (not done for b,c,d except consistency)
 
-clean
+clean for all
 
 ```{r}
 usaid_cdc <- c("USAID", "CDC")
@@ -28,10 +28,11 @@ ach_country$indicator <- factor(ach_country$indicator,
 library(gt)
 
 ach_country %>%
-  arrange(funding_agency, indicator) %>% filter(!is.na(indicator)) %>%
+  arrange(funding_agency, indicator) %>% 
+  filter(indicator %in% c("KP_PREV", "PrEP_NEW")) %>%
     gt() %>%
   tab_header(
-    title = "KP Target Achievement by Agency, FY23") %>%
+    title = "KP Target Achievement by Agency, FY24") %>%
   fmt_number(
     columns = sum.cumulative,
     decimals = 0)  %>%
@@ -50,7 +51,7 @@ ach_country %>%
 
 ### 2b
 
-clean
+not done
 
 ```{r}
 usaid_cdc <- c("USAID", "CDC")
