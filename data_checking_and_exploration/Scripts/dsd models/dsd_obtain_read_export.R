@@ -1,5 +1,5 @@
 # AUTHOR:   B. Betz | USAID
-# PURPOSE:  
+# PURPOSE:  obtain, explore, and export data on KP-focused community models in Malawi and Cote d'Ivoire
 # REF ID:   973616b9 
 # LICENSE:  MIT
 # DATE:     2024-06-06
@@ -94,6 +94,12 @@ mwi_kp_mech <- df |> filter(country=="Malawi",
                             otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID")) |> 
   group_by(mech_code) |> summarise(.groups = "drop") |> pull()
 
+#generate list of districts with KP mechanisms
+mwi_kp_mech_psnu <- df |> filter(country=="Malawi", 
+                            mech_code %in% c("81759", "81764", "70190"),
+                            otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID")) |> 
+  group_by(psnu) |> summarise(.groups = "drop") |> pull()
+
 
 ## Cote d'Ivoire DIC sites and community--------------  
 
@@ -123,41 +129,81 @@ cdi_kp_mech <- df |> filter(
     otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID")) |> 
   group_by(mech_code) |> summarise(.groups = "drop") |> pull()
 
+#generate list of districts with KP mechanisms
+cdi_kp_mech_psnu <- df |> filter(
+  mech_code %in% c("81612", "81611", "84189", "81613"),
+  otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID")) |> 
+  group_by(psnu) |> summarise(.groups = "drop") |> pull()
 
 ## Apply lists above to df to create analytic frame
 
 af <- df |> filter(
-             otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID"),
-             cumulative > 0) |> 
+             otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID") | (str_detect(standardizeddisaggregate, "Total") & indicator != "KP_PREV"),
+             # cumulative > 0
+             ) |> 
   mutate(
     #identify site org units which are DICs from lists generated above
     site_dic = case_when(facilityuid %in% cdi_dic_facilityuid | facilityuid %in% mwi_dic_facilityuid ~ "DIC",
                           facilityuid == "~" ~ "above site",
-                          .default = "facility"),
+                          .default = "not a DIC"),
     #identify community org units with DICs from lists generated above
     community_dic = case_when(communityuid %in% cdi_dic_communityuid | communityuid %in% mwi_dic_communityuid ~ "DIC",
-                          .default = "other"),
+                          .default = "no DICs"),
     #identify psnu org units with DICs from lists generated above
     psnu_dic = case_when(psnuuid %in% cdi_dic_psnuuid | psnuuid %in% mwi_dic_psnuuid ~ "DIC",
-                          .default = "other"),
+                          .default = "no DICs"),
     #Identify KP mechanisms from lists above
     mech_type = case_when(mech_code %in% cdi_kp_mech ~ "KP",
                                mech_code %in% mwi_kp_mech ~ "KP",
-                               .default = "other") |> 
+                               .default = "other"),
+    #Identify psnus with KP mechanisms from lists above
+    psnu_mech_type = case_when(psnu %in% cdi_kp_mech_psnu ~ "KP mech in district",
+                          psnu %in% mwi_kp_mech_psnu ~ "KP mech in district",
+                          .default = "other"),
+    
          ) |> 
-  group_by(across(-c("targets":"cumulative"))) |> 
-  summarize(across(c("targets":"cumulative"), ~sum(., na.rm = TRUE)), .groups = "drop") |> 
+    # group_by(across(-c("targets":"cumulative"))) |> 
+    # summarize(across(c("targets":"cumulative"), ~sum(., na.rm = TRUE)), .groups = "drop") |> 
   reshape_msd() |>
+    group_by(across(-c("value"))) |>
+    summarize(across(c("value"), ~sum(., na.rm = TRUE)), .groups = "drop") |>
+  
+  mutate(indicator = case_when(indicator %in% c("TX_PVLS", "TX_TB") ~ str_c(indicator, numeratordenom, sep = "_"),
+                               .default = indicator
+                               ),
+         disagg = case_when(str_detect(standardizeddisaggregate, "Total") ~ "Total",
+                            str_detect(standardizeddisaggregate, "KeyPop") ~ "KP"),
+         #map this later to do for all orgunit leels
+         comparison_community = case_when(
+           community_dic == "DIC" ~ "DIC; KP mechanism",
+           .default = if_else(psnu_mech_type == "KP mech in district",
+                              # psnu %in% cdi_kp_mech_psnu | 
+                                # psnu %in%  mwi_kp_mech_psnu, 
+                              "no DIC; KP mechanism", 
+                              "no DIC; no KP mechanism")
+         )) |> 
   glimpse()
 
-af |> count(country, mech_type, psnu_dic, community, community_dic, facility, site_dic)
+# # assess orgunit structure by country ----
+af |> filter(country == "Malawi") |>  group_by(country, snu1, snu2, psnu, cop22_psnu, community) |> summarise()
+af |> filter(country != "Malawi", community != "Data reported above Community Level" ) |>
+  group_by(snu1, snu2, cop22_psnu, psnu, community, facility) |> summarise() |> print(n=1200)
+# 
+# 
+# #assess dic levels
+# af |> filter(psnu_dic == "DIC") |> 
+#   group_by(country, site_dic) |> 
+#   summarise(n = n_distinct(site_dic, facility))
+# 
+# af |> filter(community_dic == "DIC") |> 
+#   group_by(country, site_dic) |> 
+#   summarise(n = n_distinct(site_dic, facility))
+# 
+# af |> filter(community_dic == "DIC") |> 
+#   group_by(country, site_dic) |> 
+#   summarise(n = n_distinct(sny, facility))
 
-af |> filter(psnu_dic == "DIC") |> 
-  group_by(country, site_dic) |> 
-  summarise(n = n_distinct(site_dic, facility))
-
-af |> filter(community_dic == "DIC") |> 
-  group_by(country, site_dic) |> 
-  summarise(n = n_distinct(site_dic, facility))
-
+# output -------
 write_csv(af, "Dataout/dsd_cdi_mwi.csv")
+
+
