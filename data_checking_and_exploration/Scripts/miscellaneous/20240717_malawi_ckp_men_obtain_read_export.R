@@ -77,19 +77,24 @@
 ## all from Pakachere, which focuses on FSW, and only from FSW focused districts where MACRO implements EpiC--------------  
 macro_districts <- c("Machinga District", "Zomba District")
 ckp_ages <- c("01-04", "05-09", "10-14", "<01", "<15")
+kp <- c("MSM", "TG", "FSW")
 
-
-af <- dfmwi |> 
-  filter(mech_code == "70190" | 
-           (mech_code == "81759" & cop22_psnu %in% macro_districts),
+af <- dfmwi |>
+  filter(mech_code == "70190" | mech_code == "81759",
          fiscal_year >= 2023,
-         !str_detect(standardizeddisaggregate, "Total|KeyPop"),
-         !str_detect(standardizeddisaggregate, "ARV")) |> 
-  mutate(
+         !str_detect(standardizeddisaggregate, "Total") ,
+         !(str_detect(standardizeddisaggregate, "KeyPop") & !otherdisaggregate_sub %in% kp),
+         !str_detect(standardizeddisaggregate, "ARV")
+         ) |> 
+  mutate(mech_partner = case_when(mech_code == "70190" ~ "Pakachere",
+                                  mech_code == "81759" & cop22_psnu %in% macro_districts ~ "EpiC/MACRO",
+                                  mech_code == "81759" ~ str_c("EpiC/Other", indicatortype, sep="_")),
         age_group = case_when(!ageasentered %in% ckp_ages ~ "Adult",
                               ageasentered %in% ckp_ages ~ "Child"),
-        pop_presumed = case_when(sex == "Male" &
-                          !ageasentered %in% ckp_ages ~ "Clients of sex workers",
+        pop_presumed = case_when(sex == "Male" & 
+                                 (mech_code == "70190" | cop22_psnu %in% macro_districts) &
+                                 !ageasentered %in% ckp_ages ~ "Clients of sex workers",
+                          otherdisaggregate_sub %in% kp ~ otherdisaggregate_sub,
                           age_group == "Adult" ~ str_c(age_group, sex, sep = " "),
                           age_group == "Child" ~ "Children",
                           # .default = 
@@ -97,11 +102,12 @@ af <- dfmwi |>
   reshape_msd() |>
     group_by(across(-c("value"))) |>
     summarize(across(c("value"), ~sum(., na.rm = TRUE)), .groups = "drop") |>
-  mutate(indicator = case_when(indicator %in% c("TX_PVLS", "TX_TB") ~ str_c(indicator, numeratordenom, sep = "_"),
+    mutate(indicator = case_when(indicator %in% c("TX_PVLS", "TX_TB") ~ 
+                                   str_c(indicator, numeratordenom, sep = "_"),
                                
                                str_detect(indicator, "HTS_INDEX_") &  
                                  str_extract(standardizeddisaggregate, "(?<=Sex/).+$") == "Result" ~ 
-                                    str_c("HTS_INDEX", "result",
+                                    str_c("HTS_INDEX", "Tested",
                                           str_extract(indicator, "(?<=X\\_).+$"),
                                           sep = "_"),
 
@@ -126,18 +132,18 @@ af <- dfmwi |>
          modality = case_when(str_detect(indicator, "INDEX") | is.na(modality) ~ ".",
                               .default = modality)
          ) |>
-  filter(period_type == "cumulative") |> 
+  filter(period_type == "cumulative") |>  
   glimpse()
 
-# af |> filter(
-#   str_detect(indicator, "INDEX")) |> 
-#   count(indicator, standardizeddisaggregate, otherdisaggregate) |> 
-#   gt::gt()
-# 
-# af |> filter(
-#   str_detect(indicator, "INDEX")) |> 
-#   count(indicator) |> 
-#   gt::gt()
+af |> filter(
+  str_detect(indicator, "INDEX")) |>
+  count(indicator, standardizeddisaggregate, otherdisaggregate) |>
+  gt::gt()
+
+af |> filter(
+  str_detect(indicator, "INDEX")) |>
+  group_by(indicator) |> summarise(value=sum(value, na.rm = TRUE)) |> 
+  gt::gt()
 
 write_csv(af, "Dataout/mwi_ckp_clients.csv")
 
