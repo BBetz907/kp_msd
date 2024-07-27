@@ -31,33 +31,34 @@
   path <- paste0(si_path(),"/site-level/")
   
   # # OBTAIN DATA ------------------------------------------------------------------
-  # #create active session
-  # sess <- grabr::pano_session(username = pano_user(), password = pano_pwd())
-  # 
-  # # Extract data items details ----------------------------------------------
-  # url <- "https://pepfar-panorama.org/forms/downloads/"
-  # 
-  # dir_items <- pano_items(page_url = url, 
-  #                         username = pano_user(),
-  #                         password = pano_pwd()) 
-  # 
-  # mer_items_path <-  dir_items |> filter(str_detect(item, "MER\\sFY20[0-9]{2}\\sQ[1-4]")) |> 
-  #   pull(path) 
-  # 
-  # mer_items <- pano_items(mer_items_path)
-  # 
-  # site_items <- mer_items |> filter(item == "Site Level") |> pull(path)
-  # site_urls_for_dsd <- pano_items(site_items) |> filter(str_detect(item, "Malawi|Cote")) |> pull(path) |> print()
-  # 
-  # #download
-  # map(site_urls_for_dsd, ~grabr::pano_download(item_url = .x, session = sess, dest = path))
+  #create active session
+  sess <- grabr::pano_session(username = pano_user(), password = pano_pwd())
+
+  # Extract data items details ----------------------------------------------
+  url <- "https://pepfar-panorama.org/forms/downloads/"
+
+  dir_items <- pano_items(page_url = url,
+                          username = pano_user(),
+                          password = pano_pwd())
+
+  mer_items_path <-  dir_items |> filter(str_detect(item, "MER\\sFY20[0-9]{2}\\sQ[1-4]")) |>
+    pull(path)
+
+  mer_items <- pano_items(mer_items_path)
+
+  site_items <- mer_items |> filter(item == "Site Level") |> pull(path)
+  site_urls_for_dsd <- pano_items(site_items) |> filter(str_detect(item, "Congo|Malawi|Cote")) |> pull(path) |> print()
+
+  #download
+  map(site_urls_for_dsd, ~grabr::pano_download(item_url = .x, session = sess, dest = path))
   
   # IMPORT ------------------------------------------------------------------
   
   file_mli <- glamr::return_latest(folderpath =  path, pattern = "Malawi")
   file_cdi <- glamr::return_latest(folderpath =  path, pattern = "Cote")
+  file_drc <- glamr::return_latest(folderpath =  path, pattern = "Congo")
   
-  files <- c(file_mli, file_cdi)
+  files <- c(file_mli, file_cdi, file_drc)
   
   # filenames <- map(files, ~str_c(path, .x))
   
@@ -74,7 +75,7 @@ mwi_dic <- df |> filter(country=="Malawi",
   filter(!str_detect(facility, "Health|Hospital|Dispensary|Maternity|Clinic|Project|Dream|District|Facility|Assembly")) 
   
 #confirmed that this list contains 18 DICs, no other facility types
-mwi_dic |> count(snu1, snu2, cop22_psnu, psnu, community, facility)
+mwi_dic |> count(snu1, snu2, cop22_psnu, psnu, community, communityuid, facility)
 
 #generate list facilityuid with DICs
 mwi_dic_facilityuid <- mwi_dic  |> 
@@ -134,6 +135,48 @@ cdi_kp_mech_psnu <- df |> filter(
   mech_code %in% c("81612", "81611", "84189", "81613"),
   otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID")) |> 
   group_by(psnu) |> summarise(.groups = "drop") |> pull()
+
+
+## DRC Community ORGUNITs with DICs/Podis--------------  
+
+drc_dic <- df |> filter(
+      funding_agency == "USAID",
+      prime_partner_name == "Family Health International",
+      # mech_code %in% c("81612", "81611", "84189", "81613"),
+      otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID"))
+
+#confirmed that this list contains only the 3 known DICs in Cote d'Ivpore
+drc_dic |> count(snu1, snu2, cop22_psnu, psnu, community, facility)
+
+#generate list of facilityuid with DICs
+drc_dic_facilityuid <- drc_dic |>
+  group_by(facilityuid) |> summarise(.groups = "drop") |> pull()
+
+#generate list ofcommunityuid with DICs
+drc_dic_communityuid <- drc_dic |> 
+  group_by(communityuid) |> summarise(.groups = "drop") |> pull()
+
+#generate list of psnuuid with DICs
+drc_dic_psnuuid <- drc_dic |>   
+  group_by(psnuuid) |> summarise(.groups = "drop") |> pull()
+
+
+#generate list of KP mechanisms
+drc_kp_mech <- drc_dic |> 
+  group_by(mech_code) |> summarise(.groups = "drop") |> pull()
+
+#generate list of districts with KP mechanisms
+drc_kp_mech_psnu <- drc_dic |> 
+  group_by(psnu) |> summarise(.groups = "drop") |> pull()
+
+drc_fac <- drc_dic |> group_by(prime_partner_name, mech_code, snu1, snu1uid, community, communityuid, facility, facilityuid) |> 
+  summarise(n = n_distinct(indicator), .groups = "drop") |> select(-n)
+
+drc_comm <- drc_fac |> count(prime_partner_name, mech_code, snu1, snu1uid, community, communityuid) |> select(-n)
+
+write_csv(drc_comm, "dataout/drc_health_zone_list_community.csv")
+
+write_csv(drc_fac, "dataout/drc_health_zone_list_facility.csv")
 
 ## Apply lists above to df to create analytic frame
 
