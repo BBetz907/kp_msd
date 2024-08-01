@@ -141,8 +141,8 @@ cdi_kp_mech_psnu <- df |> filter(
 
 drc_dic <- df |> filter(
       funding_agency == "USAID",
-      prime_partner_name == "Family Health International",
-      # mech_code %in% c("81612", "81611", "84189", "81613"),
+      # prime_partner_name == "Family Health International",
+      mech_code %in% c("84206", "84207", "85505", "85506"),
       otherdisaggregate %in% c("FSW", "MSM", "TG", "PWID"))
 
 #confirmed that this list contains only the 3 known DICs in Cote d'Ivpore
@@ -248,5 +248,4 @@ af |> filter(country != "Malawi", community != "Data reported above Community Le
 
 # output -------
 write_csv(af, "Dataout/dsd_cdi_mwi.csv")
-
 
