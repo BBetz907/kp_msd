@@ -4,32 +4,26 @@ author: "Bourke Betz"
 format: html
 editor: visual
 params: 
-  fiscal_year: 2022
+  fiscal_year: 2023
   population: "KP"
 ---
 
 ```{r}
-library(tidyverse)
 library(janitor)
+library(gagglr)
+library(tidyverse)
+
 ```
 
-Identify the name of the latest PSNU x IM MER Structured Data Set
+Identify the name of the latest OU x IM MER Structured Data Set
 
 ```{r}
 
-psnu <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY2")
-# psnu_file_name <- str_extract(psnu, "(?<=Data\\/).+(?=\\.rds)") 
+filename <- glamr::return_latest(folderpath =  "../../Data/", pattern = "OU_IM_FY2")
 
 ```
 
-![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
 
-Read MSD
-
-```{r}
-psnu_df <- gophr::read_psd(psnu, save_rds = TRUE, remove_txt = FALSE)
-
-```
 
 Define country of interest
 
@@ -40,14 +34,14 @@ gpc_country <- c("Angola", "Botswana", "Brazil", "Cameroon", "China", "Cote d'Iv
 
 ```
 
-Filter and transform
+Read, filter and transform
 
 ```{r}
-df <- psnu_df |>  
+df <- gophr::read_psd(filename) |>  
   filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == TRUE,
          fiscal_year == params$fiscal_year,
          indicator %in% c("KP_PREV", "TX_CURR"),
-         disaggregate != "KeyPop/Status",
+         standardizeddisaggregate != "KeyPop/Status",
          country %in% gpc_country) |>
   # mutate(indicator = 
   #          recode(indicator, "TX_PVLS" = paste0(indicator,"_",numeratordenom)),
@@ -64,25 +58,25 @@ df <- psnu_df |>
               keypop = str_extract(otherdisaggregate,
                       "FSW|MSM|TG|PWID|People\\sin\\sprisons"),
          keypop = recode(keypop, "People in prisons" = "Prisoners")) |>
-  select(operatingunit, country, snu1, psnu, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, disaggregate, tx_ml_reason, keypop, fy, targets, cumulative) |> 
+  select(operatingunit, country, partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, disagg, standardizeddisaggregate, tx_ml_reason, keypop, fy, targets, cumulative) |> 
   filter(disagg==params$population)
 ```
 
 ```{r}
 gpc_coverage <- df |> 
-  select(country, psnu, fy,  keypop, indicator, cumulative) |> 
+  select(country, fy,  keypop, indicator, cumulative) |> 
   mutate(cumulative = coalesce(cumulative, 0),
          cumulative = if_else(cumulative>0,1,0)) |>
-  group_by(country, psnu, fy,  keypop, indicator) |>
+  group_by(country, fy,  keypop, indicator) |>
   summarise(cumulative = max(cumulative),  .groups = 'drop') |>
   pivot_wider(names_from = indicator, values_from = cumulative) |>
   mutate(KP_PREV  = coalesce(KP_PREV , 0),
          TX_CURR  = coalesce(TX_CURR , 0)) |>
   print()
 
-fileout2 <- paste0("../../Dataout/FY", params$fiscal_year, "GPC_country_PEPFAR_coverage.csv")
-
-write_csv(gpc_coverage, fileout2)
+# fileout2 <- paste0("../../Dataout/FY", params$fiscal_year, "GPC_country_PEPFAR_coverage.csv")
+ 
+# write_csv(gpc_coverage, fileout2)
 
 
 ```
@@ -98,7 +92,28 @@ gpc_indicator_results <- df |>
          TX_CURR  = coalesce(TX_CURR , 0)) |>
   print(n=110)
 
-fileout <- paste0("../../Dataout/FY", params$fiscal_year, "_GPC_country_PEPFAR_indicator_data.csv")
+
+```
+
+compare output to past
+
+```{r}
+past_filename <- return_latest(folderpath = "../../Dataout", pattern = "GPC_country_PEPFAR_indicator")
+
+past <- read_csv(past_filename) %>% mutate(fy=as.integer(fy))
+
+waldo::compare(past, gpc_indicator_results)
+identical(past, gpc_indicator_results)
+compare::compare(past, gpc_indicator_results)
+all.equal(past, gpc_indicator_results)
+```
+
+output new file
+
+```{r}
+msd_date <- str_extract(filename, "[0-9]{8}")
+
+fileout <- paste0("../../Dataout/FY", params$fiscal_year, "_GPC_country_PEPFAR_indicator_data_", msd_date, ".csv")
 
 write_csv(gpc_indicator_results, fileout)
 ```
