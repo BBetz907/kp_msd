@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-### abc
+### ab
 
 CORRECT
 
@@ -15,7 +15,8 @@ pvls_trends_country <- qcheck %>% filter(
   disagg == "KP", 
   fy == 2024,
   funding_agency == "USAID",
-  !country %in% c("Liberia","Papua New Guinea", "PNG", "Uganda", "Nigeria"),
+   # country == "Nigeria",
+  # !country %in% c("Liberia","Papua New Guinea", "PNG", "Uganda", "Ukraine"),
   indicator %in% vl_indicators) %>%
   group_by(fyq, disagg, indicator) %>%
   summarise(sum.results=sum(results), .groups = "drop") %>% print()
@@ -34,12 +35,23 @@ pvls_trends_country %>%
     title = glue::glue("PEPFAR {pvls_trends_country$disagg}")
   )
 
+pvls_trends_country %>% 
+  filter(str_detect(indicator, "PVLS")) %>%
+  ggplot2::ggplot(aes(x = indicator, y=sum.results, fill=indicator)) + geom_col() + geom_text(aes(label = sum.results), position = position_nudge(y=200)) + facet_grid(~fyq) +   scale_fill_manual(values = c(TX_CURR = grey10k, TX_PVLS_D = "#64b4a6", TX_PVLS_N = "#004e43")) + si_style_nolines() + theme(axis.text.x = element_text(angle=90), axis.title.x = element_blank(), legend.position = "none") + labs(
+    title = glue::glue("Nigeria USAID {pvls_trends_country$disagg}")
+  )
+
 ```
 
 #### cleaning
 
+NUMBERS slightly off, likely due to known issues filters
+
 ```{r}
-vl <- check %>% filter(disagg == "KP", str_detect(indicator, "PVLS"), fy == 2024) %>%
+vl <- check %>% filter(disagg == "KP", 
+                       !country %in% c("Ukraine", "Liberia", "PNG", "Nigeria"),
+                       funding_agency == "USAID",
+                       str_detect(indicator, "PVLS"), fy == 2024) %>%
   group_by(disagg, keypop, indicator) %>%
   summarise(sum.cum=sum(cumulative), .groups = "drop") %>%
   pivot_wider(names_from = indicator, values_from = sum.cum) %>%

@@ -127,17 +127,18 @@ kp_clean <- function(df, time = NULL, focus = NULL) {
   select(operatingunit, country, contains("snu"), partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, standardizeddisaggregate, arv, otherdisaggregate, fy, targets, cumulative)
     } else if (focus == "modality") {
       df2 <- df |> 
-        filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
-                          str_detect(indicator, "HTS_TST") == TRUE
+        filter(str_detect(standardizeddisaggregate, "Mod"),
+               # str_detect(indicator, "^HTS")
                ) %>%
-        pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
-        mutate(results = coalesce(results, 0),
-          qtr = str_replace(qtr, "qtr","Q"),
-          fy = fiscal_year,
-          fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr),
-          age = trendscoarse) %>%
-      select(operatingunit, country, contains("snu"), prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom,
-             standardizeddisaggregate, modality, fy, fyq, results, age, ageasentered, sex)
+        # pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
+         mutate(indicator = factor(indicator, levels = indicator_list),
+                fy = fiscal_year,
+                funding_agency = recode(funding_agency, "HHS/CDC" = "CDC"),
+                partner = prime_partner_name,
+                cumulative = coalesce(cumulative, 0)
+                ) %>%
+      select(operatingunit, country, contains("snu"), partner, mech_code, mech_name, indicator, funding_agency, numeratordenom,
+             standardizeddisaggregate, modality, fy, cumulative)
     }  else {
       stop("Invalid value for 'focus'. Please set 'mmd' or 'modality' for focus")
     }
@@ -173,8 +174,9 @@ qcheck <- mer_df %>% kp_setup() |> kp_clean(time = "fyq")
 
 mmd <- mer_df |> kp_setup() |> kp_clean(focus = "mmd")
 
-mer_df <- mer_df %>% filter(str_detect(indicator, "^HTS"))
-modality <- mer_df |> kp_setup() |> kp_clean(focus = "modality")
+modality <- mer_df |> 
+  filter(str_detect(standardizeddisaggregate, "Mod")) %>% 
+  kp_clean(focus = "modality")
 ```
 
 ```{r}

@@ -9,11 +9,11 @@ country3 <- "Ethiopia"
 country4 <- "Vietnam"
 country5 <- "Uganda"
 
-fyq_curr <- c("FY24 Q2")
+fyq_curr <- c("FY24 Q3")
 
 ```
 
-### 4a-c
+### 4abc
 
 clean - Ukraine data polluting results
 
@@ -60,22 +60,22 @@ qcheck %>%
   print()
 ```
 
-### 4de
+### 4cde
 
-clean
+not checked
 
 ```{r}
 #| echo: false
 
 
 modality %>%
-  filter(fy == max(fy),
+  filter(fy == max(fy)-1,
          indicator %in% c("HTS_TST_POS", "HTS_TST"),
         country != "Ukraine"
      ) %>%
   group_by(indicator, modality) %>%
-  summarise(results = sum(results), .groups="drop") %>%
-  pivot_wider(names_from = indicator, values_from = results) %>%
+  summarise(cumulative = sum(cumulative), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = cumulative) %>%
   mutate(positivity = scales::percent(HTS_TST_POS/HTS_TST, accuracy = 0.1),
          positivity_frac = HTS_TST_POS/HTS_TST) %>%
   arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
@@ -83,7 +83,7 @@ modality %>%
 
 qcheck %>%
   filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
-        fy == max(fy),
+        fy == max(fy)-1,
         disagg == "KP",
         country != "Ukraine") %>%
   group_by(keypop, indicator) %>% 
@@ -108,7 +108,7 @@ check %>%
   group_by(keypop) %>% 
   summarise(cumulative = sum(cumulative), targets = sum(targets), 
             .groups="drop") %>%
-  mutate(ach = scales::percent(cumulative/targets, accuracy = 0.1),
+  mutate(positivity = scales::percent(cumulative/targets, accuracy = 0.1),
          ) %>%
   print()
 ```

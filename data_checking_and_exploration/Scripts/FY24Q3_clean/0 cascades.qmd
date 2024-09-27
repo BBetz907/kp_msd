@@ -71,7 +71,7 @@ geom_text(color = "black", position = position_stack(vjust = 0.9), aes(y=sum.tar
 
 ### Global PEPFAR Treatment Cascade
 
-PEPFAR 2024 all correct. USAID correct for prior years, small discrepancies for CDC Targets.
+PEPFAR 2024-5 all correct.
 
 ```{r}
 #positive cascade
@@ -111,7 +111,7 @@ compare_pos_cascade <- check %>%
   filter(
   # country=="Ethiopia",                            
          indicator %in% pos, 
-         fy == max(fy),
+         fy == max(fy)-1,
          # funding_agency!="Dedup",
          disagg == "KP",) %>%
   # mutate(funding_agency = reorder(funding_agency, 
@@ -143,7 +143,7 @@ compare_cascade_by_b <- check %>%
   filter(
     # country=="Nepal",                            
          indicator %in% neg, 
-         fy == max(fy),
+         fy == max(fy)-1,
          # funding_agency=="USAID",
          # snu1 %in% c("Maputo","Sofala", "Tete", "Manica"),
          # snu1 %in% c("Central Province","Copperbelt Province", "Lusaka Province"),
