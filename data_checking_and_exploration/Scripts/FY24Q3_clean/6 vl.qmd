@@ -1,0 +1,114 @@
+---
+title: "data_checking_vl"
+format: html
+editor: visual
+---
+
+### abc
+
+CORRECT
+
+```{r, warning=false}
+vl_indicators <- c("TX_PVLS_N", "TX_PVLS_D", "TX_CURR_Lag2", "TX_CURR")
+
+pvls_trends_country <- qcheck %>% filter(
+  disagg == "KP", 
+  fy == 2024,
+  funding_agency == "USAID",
+  !country %in% c("Liberia","Papua New Guinea", "PNG", "Uganda", "Nigeria"),
+  indicator %in% vl_indicators) %>%
+  group_by(fyq, disagg, indicator) %>%
+  summarise(sum.results=sum(results), .groups = "drop") %>% print()
+  
+  
+  
+pvls_trends_country %>% pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D,
+         vlc = TX_PVLS_D/TX_CURR_Lag2
+         ) %>% print()
+
+
+pvls_trends_country %>% 
+  filter(str_detect(indicator, "PVLS")) %>%
+  ggplot2::ggplot(aes(x = indicator, y=sum.results, fill=indicator)) + geom_col() + geom_text(aes(label = sum.results), position = position_nudge(y=200)) + facet_grid(~fyq) +   scale_fill_manual(values = c(TX_CURR = grey10k, TX_PVLS_D = "#64b4a6", TX_PVLS_N = "#004e43")) + si_style_nolines() + theme(axis.text.x = element_text(angle=90), axis.title.x = element_blank(), legend.position = "none") + labs(
+    title = glue::glue("PEPFAR {pvls_trends_country$disagg}")
+  )
+
+```
+
+#### cleaning
+
+```{r}
+vl <- check %>% filter(disagg == "KP", str_detect(indicator, "PVLS"), fy == 2024) %>%
+  group_by(disagg, keypop, indicator) %>%
+  summarise(sum.cum=sum(cumulative), .groups = "drop") %>%
+  pivot_wider(names_from = indicator, values_from = sum.cum) %>%
+  mutate(vls = TX_PVLS_N/TX_PVLS_D) %>%
+  print() 
+```
+
+set parameters, prepare data
+
+```{r}
+
+vl_indicators <- c("TX_CURR_Lag2", "TX_PVLS_D", "TX_PVLS_N")
+ 
+nonreporters <- c("Ghana", "Liberia", "PNG", "Indonesia", "Vietnam", "Angola")
+
+southern_africa <- c("Zimbabwe", "Lesotho", "South Africa")
+
+
+lagged_vl_kp <- check %>% filter(indicator %in% vl_indicators) %>% 
+   # bind_rows(vlc_d) %>% 
+   filter(!country %in% nonreporters,
+          fy == 2024,
+          country %in% southern_africa,
+          disagg == "KP" ) %>%
+  group_by(country, indicator, ) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% print(N=12)
+
+lagged_vl_kp %>% count(indicator)
+
+
+
+lagged_vl_total <- check %>% filter(indicator %in% vl_indicators) %>% 
+   # bind_rows(vlc_d) %>% 
+   filter(!country %in% nonreporters,
+          fy == 2024,
+          country %in% southern_africa,
+          disagg != "KP" ) %>%
+  group_by(country, indicator, ) %>%
+  summarise(sum.results=sum(cumulative), .groups = "drop") %>% print()
+
+lagged_vl_total %>% count(indicator)
+
+
+```
+
+### de
+
+clean
+
+```{r}
+lagged_vl_kp %>%   group_by(country, indicator) %>%
+  summarise(sum.results=sum(sum.results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) %>%
+  mutate(vlc =  scales::percent(TX_PVLS_D/TX_CURR_Lag2,accuracy = 1),
+         vls = scales::percent(TX_PVLS_N/TX_PVLS_D, accuracy = 1)
+  )
+
+lagged_vl_kp_2bind <- lagged_vl_kp %>%   group_by(country, indicator) %>%
+  summarise(sum.results=-sum(sum.results), .groups = "drop")
+
+lagged_vl_gp <- lagged_vl_total %>% 
+  group_by(country, indicator) |> 
+  summarise(sum.results=sum(sum.results), .groups = "drop") %>%
+  rbind(lagged_vl_kp_2bind) |> 
+    group_by(country, indicator) |> 
+    summarise(sum.results=sum(sum.results), .groups = "drop") %>%
+  pivot_wider(values_from = sum.results, names_from = indicator) |> 
+  mutate( vlc =  scales::percent(TX_PVLS_D/TX_CURR_Lag2,accuracy = .1),
+          vls = scales::percent(TX_PVLS_N/TX_PVLS_D, accuracy = .1),
+         # cohort_vls =  scales::percent(TX_PVLS_N/TX_CURR_Lag2,accuracy = 1)
+         ) |> print()
+```

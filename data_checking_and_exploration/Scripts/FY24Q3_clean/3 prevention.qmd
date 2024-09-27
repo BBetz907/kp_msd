@@ -1,0 +1,87 @@
+---
+title: "3 prevention"
+format: html
+editor: visual
+---
+
+[PrEP Trends](https://tableau.usaid.gov/views/KeyPopulationsDashboard/2_fPrEPTrends?:showAppBanner=false&:display_count=n&:showVizHome=n&:origin=viz_share_link) (see 1a)
+
+```{r}
+# #| echo: false
+countries <- c("Philippines", "Nepal")
+# 
+# prep_trends <- qcheck %>%
+#   filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+#          disagg == "KP",
+#          country %in% countries) %>%
+#   group_by(country, indicator, disagg, fyq) %>%
+#   summarise(results = sum(results), .groups="drop") 
+# 
+# prep_trends %>% filter(country == countries[1]) %>%
+#   ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + geom_line() + geom_text(position = position_nudge(y=10), aes(label = results)) +
+#   scale_color_manual(values = c(PrEP_NEW = "#8980cb", PrEP_CT = "#808080")) + si_style_nolines() + labs(title = glue::glue("PEPFAR {countries[1]} {prep_trends$disagg} trends "))
+# 
+# prep_trends %>% filter(country == countries[2]) %>%
+#   ggplot(aes(x = fyq, y = results, group=indicator, color=indicator)) + geom_line() + geom_text(position = position_nudge(y=30), aes(label = results)) +
+#   scale_color_manual(values = c(PrEP_NEW = "#8980cb", PrEP_CT = "#808080")) + si_style_nolines() + labs(title = glue::glue("PEPFAR {countries[2]} {prep_trends$disagg} trends "))
+```
+
+### Prevention Trends
+
+clean for USAID. Other Agencies slightly off in past FYs
+
+```{r, warning=FALSE}
+prep_trends1 <- qcheck %>%
+  filter(indicator %in% c("PrEP_NEW", "PrEP_CT"),
+         disagg == "KP",
+         funding_agency=="USAID",
+         # country %in% countries[1]
+         ) %>%
+  group_by(indicator, fyq) %>%
+  summarise(results = sum(results), .groups="drop") |> print()
+
+prep_trends1 %>% 
+  # filter(country == countries[1]) %>%
+  ggplot(aes(x = fyq, y = results)) + 
+  facet_grid(rows = vars(indicator)) +
+  geom_line() + geom_text(position = position_nudge(y=10), aes(label = results)) +
+  scale_color_manual(values = keypop_colors) + 
+  si_style_nolines() + 
+  labs(title = glue::glue("PEPFAR {prep_trends1$disagg} trends "))
+```
+
+### KP_PREV trends
+
+Ukraine data complicating things. Otherwise correct.
+
+```{r}
+kp_prev_trends <- qcheck %>%
+  filter(indicator== "KP_PREV",
+         disagg == "KP",
+         fy >= 2023,
+         !country == "Ukraine",
+         # funding_agency == "USAID",
+         # country %in% countries[1]
+         ) %>% 
+  group_by(indicator, standardizeddisaggregate, kp_prev_status, fyq) %>%
+  summarise(results = sum(results), .groups="drop") |> 
+  filter(results > 0) |> 
+  print()
+```
+
+## 
+
+```{r}
+qcheck %>%
+  filter(indicator== "KP_PREV",
+         fy >= 2024,
+         standardizeddisaggregate == "KeyPop",
+         # country == "Philippines",
+         # funding_agency == "USAID",
+         # country %in% countries[1]
+         ) %>% 
+  group_by(indicator, standardizeddisaggregate, country, fyq) %>%
+  summarise(results = sum(results), .groups="drop") |> 
+  filter(results > 0) |> 
+  gt()
+```
