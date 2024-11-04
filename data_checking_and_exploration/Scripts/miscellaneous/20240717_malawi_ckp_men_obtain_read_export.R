@@ -79,7 +79,7 @@ macro_districts <- c("Machinga District", "Zomba District")
 ckp_ages <- c("01-04", "05-09", "10-14", "<01", "<15")
 kp <- c("MSM", "TG", "FSW")
 
-af <- dfmwi |>
+df <- dfmwi |>
   filter(mech_code == "70190" | mech_code == "81759",
          fiscal_year >= 2023,
          !str_detect(standardizeddisaggregate, "Total") ,
@@ -134,6 +134,30 @@ af <- dfmwi |>
          ) |>
   filter(period_type == "cumulative") |>  
   glimpse()
+
+#explore data, reshape
+df %>% filter(str_detect(indicator, "^HTS_INDEX")) %>% count(indicator, standardizeddisaggregate)
+
+df_index <- df %>% filter(str_detect(indicator, "^HTS_INDEX")) %>%
+  mutate(order = as.numeric(str_extract(standardizeddisaggregate, "^[1-4]")),
+         order = if_else(is.na(order), 5, order),
+         index_cascade_sex = case_when(order <= 2 ~ 
+                                         if_else(sex=="Male", "Female", "Male"),
+                                       .default = sex),
+         indicator_2 = case_when(order <= 4 ~ str_extract(indicator, "(?<=\\_[1-4]\\_).+$"),
+                                .default = indicator),
+         indicator_3 = if_else(order==5, str_extract(indicator_2, "HTS_INDEX_Tested"), indicator_2),
+         color = if_else(order==5, str_c(str_extract(indicator, "(?<=\\Tested_).+"), sep = " - "), sex)
+         
+         ) %>%
+  # count(order, indicator, indicator_2, indicator_3, sex,index_cascade_sex, standardizeddisaggregate, otherdisaggregate, statushiv) %>%
+  print(n=30)
+
+df_other <- df %>% filter(!str_detect(indicator, "^HTS_INDEX")) 
+
+
+af <- df_index %>% 
+  bind_rows(df_other) %>% glimpse()
 
 af |> filter(
   str_detect(indicator, "INDEX")) |>
