@@ -1,0 +1,173 @@
+---
+title: "snapshot_and_cascades"
+author: "bourke betz"
+format: html
+    page-layout: full
+    body-width: 900px
+editor: visual
+---
+
+```{r}
+
+```
+
+Custom Lists
+
+```{r}
+pos <-  c("HTS_TST_POS", "TX_NEW", "TX_CURR", "TX_PVLS_D", "TX_PVLS_N")
+neg <-  c("KP_PREV", "HTS_TST", "HTS_TST_NEG", "HTS_SELF", "PrEP_NEW", "PrEP_CT", "PrEP_CURR")
+# mal_im <- c("81764","81759")
+
+agency_order <- c("USAID", "CDC", "DOD", "HHS/HRSA", "Dedup")
+keypop_order <- c("FSW", "MSM", "TG", "Prisoners", "PWID")
+```
+
+Custom colors
+
+```{r}
+keypop_colors <- c(FSW = "#005e7a", MSM = "#f28965", TG = "#7ecfc0", Prisoners = "#990d2e", PWID = "#fbcc50")
+
+agency_colors <- c("USAID" = "#002f6c", "CDC" = "#a7c6ed", 
+                               "DOD" = "#ba0c2f", "HHS/HRSA" = "#cfcdc9", 
+                               "Dedup" = "#7ecfc0")
+agency_colors_text <- c("USAID" = grey10k, "DOD" = grey10k, "CDC" = grey90k, "HHS/HRSA" = grey90k, "Dedup" = grey90k)
+# agency_colors_text[is.na(match(agency_order, names(agency_colors_text)))] <-  "black"
+
+```
+
+### Global USAID Prevention Cascade
+
+PEPFAR 2023-4 all correct.
+
+```{r}
+check |> count(funding_agency)
+cascade <- check %>% filter(
+                            # !country %in% c("Ukraine", "Tanzania", "Eswatini"),
+                            # funding_agency == "CDC",
+                            # mech_code %in% mal_im,
+                            fy >= max(fy) - 2,
+                            # fy < 2024,
+                            disagg == "KP", 
+                            indicator %in% neg) %>%
+  group_by(fy, indicator, disagg) %>%
+  summarise(sum.cum=sum(cumulative), sum.targ=sum(targets), .groups = "drop") |> print()
+
+cascade %>% 
+  ggplot2::ggplot(aes(x = indicator)) + 
+    geom_col(aes(y = sum.cum)) + 
+    geom_col(aes(y=sum.targ), fill = "gray", alpha = 0.4, width =0.5) +
+    geom_text(color = "black", position = position_stack(vjust = 0.9), aes(y=sum.cum, label = sum.cum)) + 
+geom_text(color = "black", position = position_stack(vjust = 0.9), aes(y=sum.targ, label = sum.targ)) + 
+
+  facet_wrap(~ fy) + 
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = glue::glue("PEPFAR {cascade$disagg} prevention cascade by FY"),
+       y="cumulative")
+
+
+```
+
+### Global PEPFAR Treatment Cascade
+
+PEPFAR 2024 all correct. USAID correct for prior years, small discrepancies for CDC Targets.
+
+```{r}
+#positive cascade
+cascade <- check %>% filter(
+                            disagg == "KP",
+                            indicator %in% pos, 
+                            # funding_agency=="USAID",
+                            # str_detect(mech_name, "EpiC"),
+                            fy >= max(fy) - 2,
+                            ) %>%
+  group_by(fy, indicator, disagg) %>%
+  summarise(sum.cum=sum(cumulative), sum.targ=sum(targets), .groups = "drop") 
+
+cascade %>%
+  ggplot2::ggplot(aes(x = indicator)) + 
+    geom_col(aes(y = sum.cum, fill = factor(fy))) + 
+    geom_col(aes(y=sum.targ), fill = "gray", alpha = 0.4, width =0.5) +
+    geom_text(color = "black", position = position_stack(vjust = 0.9), aes(y=sum.cum, label = sum.cum)) + 
+  geom_text(color = "black", position = position_stack(vjust = 0.9), aes(y=sum.targ, label = sum.targ)) + 
+  facet_wrap(~ fy) + 
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(
+  title = glue::glue("USAID {cascade$disagg} treatment cascade by FY"),
+  y="cumulative")
+
+```
+
+### PEPFAR cascade comparison by agency
+
+correct
+
+```{r}
+
+compare_pos_cascade <- check %>%
+  filter(
+  # country=="Ethiopia",                            
+         indicator %in% pos, 
+         fy == max(fy)-1,
+         # funding_agency!="Dedup",
+         disagg == "KP",) %>%
+  # mutate(funding_agency = reorder(funding_agency, 
+                                  # match(funding_agency, agency_order))) |> 
+  group_by(indicator, funding_agency, fy, ) %>%
+  summarise(sum.cum = sum(cumulative),
+            sum.targ = sum(targets),
+            ach = sum(cumulative)/sum(targets),
+            .groups = "drop") 
+
+compare_pos_cascade %>% 
+  ggplot(aes(x=indicator)) + 
+  geom_col(aes(y=sum.cum, fill = funding_agency)) +
+  geom_text(aes(y=sum.targ+2000, label=scales::percent(ach, 1)), color = "red") +
+  geom_text(aes(y=0.9*(sum.cum), label=sum.cum, color = funding_agency)) +
+  scale_fill_manual(values = agency_colors) +
+  scale_color_manual(values = agency_colors_text) +
+  facet_grid(cols=vars(funding_agency)) +
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) + 
+    labs(title = glue::glue("PEPFAR treatment cascade by funding agency, {compare_pos_cascade$fy}"), y="cumulative")
+```
+
+clean
+
+```{r}
+compare_cascade_by_b <- check %>%
+  filter(
+    # country=="Nepal",                            
+         indicator %in% pos, 
+         fy == max(fy)-1,
+         # funding_agency=="USAID",
+         # snu1 %in% c("Maputo","Sofala", "Tete", "Manica"),
+         # snu1 %in% c("Central Province","Copperbelt Province", "Lusaka Province"),
+
+         disagg == "KP",) %>%
+  group_by(indicator, keypop, fy, 
+           # country, 
+           # funding_agency
+           ) %>%
+  summarise(sum.cum = sum(cumulative),
+            sum.targ = sum(targets),
+            ach = sum(cumulative)/sum(targets),
+            .groups = "drop")
+  
+compare_cascade_by_b %>% ggplot(aes(x=indicator)) +
+  geom_col(aes(y=sum.cum, fill = keypop)) +
+  geom_text(aes(y=sum.targ+2000, label=scales::percent(ach, 1)), color = "red") +
+  geom_text(aes(y=0.85*(sum.cum), label=sum.cum), color = "white") +
+  facet_wrap(facets = vars(keypop), nrow=1) +
+  scale_fill_manual(values=keypop_colors) +
+  theme(panel.background = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = glue::glue("prevention cascade by key pop, {compare_cascade_by_b$fy}"),y="cumulative")
+```
+
+custom indicator cascades were checked against MER data manually, and custom indicators assessed for reasonability. One filter was revised as it needed to be updated to remove duplication.

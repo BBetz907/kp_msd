@@ -55,10 +55,10 @@
   # IMPORT ------------------------------------------------------------------
   
   file_mli <- glamr::return_latest(folderpath =  path, pattern = "Malawi")
- 
-  dfmwi <- read_psd(file = file_mli) 
+  file_tnz <- glamr::return_latest(folderpath =  path, pattern = "Tanzania")
+  files <- c(file_mli, file_tnz)
 
-  
+df2 <- purrr::map_dfr(files, ~read_psd(file = .x))
   
 # MUNGE -------------------------------------------------------------------
 
@@ -79,8 +79,8 @@ macro_districts <- c("Machinga District", "Zomba District")
 ckp_ages <- c("01-04", "05-09", "10-14", "<01", "<15")
 kp <- c("MSM", "TG", "FSW")
 
-af <- dfmwi |>
-  filter(mech_code == "70190" | mech_code == "81759",
+df <- df2 |>
+  filter(mech_code %in%  c("70190", "81759", "81965", "80095", "160646", "160645", "18488", "87004", "160647"),
          fiscal_year >= 2023,
          !str_detect(standardizeddisaggregate, "Total") ,
          !(str_detect(standardizeddisaggregate, "KeyPop") & !otherdisaggregate_sub %in% kp),
@@ -135,6 +135,30 @@ af <- dfmwi |>
   filter(period_type == "cumulative") |>  
   glimpse()
 
+#explore data, reshape
+df %>% filter(str_detect(indicator, "^HTS_INDEX")) %>% count(indicator, standardizeddisaggregate)
+
+df_index <- df %>% filter(str_detect(indicator, "^HTS_INDEX")) %>%
+  mutate(order = as.numeric(str_extract(standardizeddisaggregate, "^[1-4]")),
+         order = if_else(is.na(order), 5, order),
+         index_cascade_sex = case_when(order <= 2 ~ 
+                                         if_else(sex=="Male", "Female", "Male"),
+                                       .default = sex),
+         indicator_2 = case_when(order <= 4 ~ str_extract(indicator, "(?<=\\_[1-4]\\_).+$"),
+                                .default = indicator),
+         indicator_3 = if_else(order==5, str_extract(indicator_2, "HTS_INDEX_Tested"), indicator_2),
+         color = if_else(order==5, str_c(str_extract(indicator, "(?<=\\Tested_).+"), sep = " - "), sex)
+         
+         ) %>%
+  # count(order, indicator, indicator_2, indicator_3, sex,index_cascade_sex, standardizeddisaggregate, otherdisaggregate, statushiv) %>%
+  print(n=30)
+
+df_other <- df %>% filter(!str_detect(indicator, "^HTS_INDEX")) 
+
+
+af <- df_index %>% 
+  bind_rows(df_other) %>% glimpse()
+
 af |> filter(
   str_detect(indicator, "INDEX")) |>
   count(indicator, standardizeddisaggregate, otherdisaggregate) |>
@@ -145,5 +169,5 @@ af |> filter(
   group_by(indicator) |> summarise(value=sum(value, na.rm = TRUE)) |> 
   gt::gt()
 
-write_csv(af, "Dataout/mwi_ckp_clients.csv")
+write_csv(af, "Dataout/ckp_clients.csv")
 

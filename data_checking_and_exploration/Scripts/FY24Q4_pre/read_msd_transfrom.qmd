@@ -15,7 +15,7 @@ file <- glamr::return_latest(folderpath =  "../../Data/", pattern = "PSNU_IM_FY2
 
 
 file_name <- str_extract(file, "(?<=Data\\/).+(?=\\.rds)") 
-# file_name2 <- str_extract(file2, "(?<=Data\\/).+(?=\\.rds)")
+#file_name2 <- str_extract(file2, "(?<=Data\\/).+(?=\\.rds)") 
 ```
 
 ![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAa0lEQVR42u3OywnAIBBAwcXSUoCW5D11xDoNCBGNv0MOecJOBSOi1OZMsJ4dvFxEJ1OQnMxBarIKEpNNkJbsBknJYZCSnAYJyVVQziNig7/nZkFEbhTE5HpBVO4dxOXKIDL3BLG5BJ1T6rsbMfep2CaMN00AAAAASUVORK5CYII= "Run Current Chunk")
@@ -23,7 +23,7 @@ file_name <- str_extract(file, "(?<=Data\\/).+(?=\\.rds)")
 Read MSD
 
 ```{r}
-mer_df <- gophr::read_psd(file) 
+mer_df <- gophr::read_psd(file)
 
 # nepal_msd <- mer_df |> filter(country == "Nepal") |> glimpse()
 
@@ -34,7 +34,7 @@ mer_df <- gophr::read_psd(file)
 Define indicator list and functions
 
 ```{r}
-indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS", "KP_MAT",
+indicator_list <- c("KP_PREV",  "HTS_SELF", "HTS_TST", "HTS_TST_NEG", "PrEP_NEW", "PrEP_CT", "PrEP_CURR", "HTS_TST_POS",
                     "TX_NEW", "TX_CURR", "TX_PVLS", "TX_PVLS_D", "TX_PVLS_N", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW")
 
 kp_setup <- function(df) {
@@ -127,18 +127,17 @@ kp_clean <- function(df, time = NULL, focus = NULL) {
   select(operatingunit, country, contains("snu"), partner, mech_code, mech_name, indicator, funding_agency, numeratordenom, standardizeddisaggregate, arv, otherdisaggregate, fy, targets, cumulative)
     } else if (focus == "modality") {
       df2 <- df |> 
-        filter(str_detect(standardizeddisaggregate, "Mod"),
-               # str_detect(indicator, "^HTS")
+        filter(str_detect(standardizeddisaggregate, "KeyPop|Total") == FALSE,
+                          str_detect(indicator, "HTS_TST") == TRUE
                ) %>%
-        # pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
-         mutate(indicator = factor(indicator, levels = indicator_list),
-                fy = fiscal_year,
-                funding_agency = recode(funding_agency, "HHS/CDC" = "CDC"),
-                partner = prime_partner_name,
-                cumulative = coalesce(cumulative, 0)
-                ) %>%
-      select(operatingunit, country, contains("snu"), partner, mech_code, mech_name, indicator, funding_agency, numeratordenom,
-             standardizeddisaggregate, modality, fy, cumulative)
+        pivot_longer(qtr1:qtr4, names_to = "qtr", values_to = "results" ) %>%
+        mutate(results = coalesce(results, 0),
+          qtr = str_replace(qtr, "qtr","Q"),
+          fy = fiscal_year,
+          fyq = paste0("FY",str_extract(fy, "..$"), " ", qtr),
+          age = trendscoarse) %>%
+      select(operatingunit, country, contains("snu"), prime_partner_name, mech_code, mech_name, indicator, funding_agency, numeratordenom,
+             standardizeddisaggregate, modality, fy, fyq, results, age, ageasentered, sex)
     }  else {
       stop("Invalid value for 'focus'. Please set 'mmd' or 'modality' for focus")
     }
@@ -173,10 +172,7 @@ check <- mer_df %>% kp_setup() |> kp_clean(time = "fy")
 qcheck <- mer_df %>% kp_setup() |> kp_clean(time = "fyq")
 
 mmd <- mer_df |> kp_setup() |> kp_clean(focus = "mmd")
-
-modality <- mer_df |> 
-  filter(str_detect(standardizeddisaggregate, "Mod")) %>% 
-  kp_clean(focus = "modality")
+modality <- mer_df |> kp_setup() |> kp_clean(focus = "modality")
 ```
 
 ```{r}
