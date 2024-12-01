@@ -89,7 +89,9 @@ lagged_vl_total %>% count(indicator)
 
 ### de
 
-VLS not working due to TX_CURR_Lag2 not showing up
+VLS not working due to TX_CURR_Lag2 not showing up -
+
+6d issues RESOLVED 12/1 with Nashiva's updated hyper file. 6e issues solved except for GP.
 
 ```{r}
 lagged_vl_kp %>%   group_by(country, indicator) %>%

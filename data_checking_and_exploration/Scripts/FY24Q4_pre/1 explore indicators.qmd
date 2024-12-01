@@ -11,7 +11,7 @@ library(tidyverse)
 library(gagglr)
 ```
 
-Notes: VLC data are not showing in 1ef. This is likely a result of some recoding in the SIEI hyper process. Nothing is incorrect–it just doesn't show.
+Notes: VLC data are not showing in 1ef. This is likely a result of some recoding in the SIEI hyper process. Nothing is incorrect–it just doesn't show. 1f issues Resolved with 12/1 updates after changes from Nashiva. Table in 1e still failing to load howerver–need to recode exclude except VLC
 
 ### 1ab
 
