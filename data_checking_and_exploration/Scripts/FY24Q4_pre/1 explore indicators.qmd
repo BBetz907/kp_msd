@@ -11,7 +11,7 @@ library(tidyverse)
 library(gagglr)
 ```
 
-Notes: VLC data are not showing in 1ef. This is likely a result of some recoding in the SIEI hyper process. Nothing is incorrect–it just doesn't show. 1f issues Resolved with 12/1 updates after changes from Nashiva. Table in 1e still failing to load howerver–need to recode exclude except VLC
+Notes: VLC data issues, compounding some data issues in 1e (table). Resolved 12.3
 
 ### 1ab
 
@@ -174,7 +174,7 @@ measure_trends_country2 %>% ggplot2::ggplot(aes(x = fyq, group=keypop)) +
   labs(title=glue::glue("PEPFAR {measure_trends_country2$country}HTS_TST_POS AND tx_new by {measure_trends_country2$disagg}"))
 ```
 
-1f - linkage, vls by country - CLEAN – VLC NOT WORKING
+1f - linkage, vls by country
 
 ```{r, warning=false}
 
