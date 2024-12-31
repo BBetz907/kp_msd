@@ -30,14 +30,14 @@ keypop_colors <- c(FSW = "#005e7a", MSM = "#f28965", TG = "#7ecfc0", Prisoners =
 agency_colors <- c("USAID" = "#002f6c", "CDC" = "#a7c6ed", 
                                "DOD" = "#ba0c2f", "HHS/HRSA" = "#cfcdc9", 
                                "Dedup" = "#7ecfc0")
-agency_colors_text <- c("USAID" = glitr::grey10k, "DOD" = glitr::grey10k, "CDC" = glitr::grey90k, "HHS/HRSA" = glitr::grey90k, "Dedup" = glitr::grey90k)
+agency_colors_text <- c("USAID" = grey10k, "DOD" = grey10k, "CDC" = grey90k, "HHS/HRSA" = grey90k, "Dedup" = grey90k)
 # agency_colors_text[is.na(match(agency_order, names(agency_colors_text)))] <-  "black"
 
 ```
 
 ### Global USAID Prevention Cascade
 
-PEPFAR 2024 all correct. Some small inconsistencies for previous years
+PEPFAR 2023-4 all correct. Resolutions to VLC tables on ab on 6-3
 
 ```{r}
 check |> count(funding_agency)
@@ -169,3 +169,5 @@ compare_cascade_by_b %>% ggplot(aes(x=indicator)) +
         axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(title = glue::glue("prevention cascade by key pop, {compare_cascade_by_b$fy}"),y="cumulative")
 ```
+
+custom indicator cascades were checked against MER data manually, and custom indicators assessed for reasonability. One filter was revised as it needed to be updated to remove duplication.

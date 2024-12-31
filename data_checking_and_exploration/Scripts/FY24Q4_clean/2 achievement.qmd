@@ -1,0 +1,91 @@
+---
+title: "section 3 achievement"
+format: html
+editor: visual
+---
+
+### 2a,cd
+
+clean
+
+```{r}
+usaid_cdc <- c("USAID", "CDC")
+
+ach_country <- check %>% 
+  filter(fy == 2024, funding_agency %in% usaid_cdc, 
+         # country == "Philippines", 
+         disagg == "KP") %>%
+  group_by(funding_agency, indicator) %>%
+  summarise(sum.cumulative=sum(cumulative),
+            sum.targets=sum(targets)) %>%
+  mutate(ach = sum.cumulative/sum.targets) %>% glimpse()
+
+ach_country$indicator <- factor(ach_country$indicator,
+                                      levels = c("KP_PREV", "HTS_SELF", "HTS_TST", "HTS_TST_POS", "TX_NEW",
+                                                 "TX_CURR", "TX_PVLS_D", "TX_PVLS_N", "PrEP_NEW", "PrEP_CURR", "PrEP_CT"))
+#error here, no USAID_CDC
+
+library(gt)
+
+ach_country %>%
+  arrange(funding_agency, indicator) %>% filter(!is.na(indicator)) %>%
+    gt() %>%
+  tab_header(
+    title = "KP Target Achievement by Agency, FY23") %>%
+  fmt_number(
+    columns = sum.cumulative,
+    decimals = 0)  %>%
+  fmt_number(
+    columns = sum.targets,
+    decimals = 0) %>%
+  fmt_percent(
+    columns = ach,
+    decimals = 0) %>%
+  cols_align(
+    align = "left",
+    columns = indicator
+  ) %>%
+  print()
+```
+
+### 2b
+
+clean
+
+```{r}
+usaid_cdc <- c("USAID", "CDC")
+
+ach_mech <- check %>% filter(fy == 2024, country == "Philippines", disagg == "KP") %>%
+  group_by(mech_name, mech_code, indicator) %>%
+  summarise(sum.cumulative=sum(cumulative),
+            sum.targets=sum(targets)) %>%
+  mutate(ach = sum.cumulative/sum.targets,
+         mech = str_c(mech_code, " _ ", mech_name)) %>% glimpse()
+
+ach_country$indicator <- factor(ach_country$indicator,
+                                      levels = c("KP_PREV", "HTS_SELF", "HTS_TST", "HTS_TST_POS", "TX_NEW",
+                                                 "TX_CURR", "TX_PVLS_D", "TX_PVLS_N", "PrEP_NEW", "PrEP_CURR", "PrEP_CT"))
+#error here, no USAID_CDC
+
+library(gt)
+
+ach_mech %>%
+  arrange(desc(mech_name), indicator) %>% filter(!is.na(indicator)) %>%
+    gt() %>%
+  tab_header(
+    title = "KP Target Achievement by Agency") %>%
+  fmt_number(
+    columns = sum.cumulative,
+    decimals = 0)  %>%
+  fmt_number(
+    columns = sum.targets,
+    decimals = 0) %>%
+  fmt_percent(
+    columns = ach,
+    decimals = 0) %>%
+  cols_align(
+    align = "left",
+    columns = indicator
+  ) %>%
+  print()
+```

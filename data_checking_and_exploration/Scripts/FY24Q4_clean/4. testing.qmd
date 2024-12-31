@@ -1,0 +1,99 @@
+---
+title: "7ab"
+format: html
+editor: visual
+---
+
+```{r}
+country3 <- "Ethiopia"
+country4 <- "Vietnam"
+country5 <- "Uganda"
+
+fyq_curr <- c("FY24 Q4")
+
+```
+
+### 4a-c
+
+clean - Ukraine data causing issues, excluded as a result
+
+```{r}
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        # country== country4,
+        disagg == "KP",
+        fy == 2024,
+        fyq %in% fyq_curr,
+        country != "Ukraine"
+        ) %>%
+  group_by(indicator, funding_agency, fyq) %>% 
+  summarise(results = sum(results), .groups = 'drop') %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = scales::percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        fy == 2024,
+        fyq %in% fyq_curr,
+        country != "Ukraine"
+        ) %>%
+  group_by(indicator, keypop, fyq) %>% 
+  summarise(results = sum(results), .groups = 'drop') %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = scales::percent(HTS_TST_POS/HTS_TST, accuracy = 1)) %>%
+  print()
+```
+
+### 4de
+
+clean
+
+```{r}
+#| echo: false
+
+
+modality %>%
+  filter(fy == max(fy)-1,
+         indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        country != "Ukraine"
+     ) %>%
+  group_by(indicator, modality) %>%
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = scales::percent(HTS_TST_POS/HTS_TST, accuracy = 0.1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+
+qcheck %>%
+  filter(indicator %in% c("HTS_TST_POS", "HTS_TST"),
+        fy == max(fy)-1,
+        disagg == "KP",
+        country != "Ukraine") %>%
+  group_by(keypop, indicator) %>% 
+  summarise(results = sum(results), .groups="drop") %>%
+  pivot_wider(names_from = indicator, values_from = results) %>%
+  mutate(positivity = scales::percent(HTS_TST_POS/HTS_TST, accuracy = 0.1),
+         positivity_frac = HTS_TST_POS/HTS_TST) %>%
+  arrange(desc(positivity_frac)) %>% select(-positivity_frac) %>%
+  print()
+```
+
+### 4f
+
+clean
+
+```{r}
+check %>%
+  filter(indicator %in% c("HTS_TST_POS"),
+        fy == 2024,
+        disagg == "KP",
+        country != "Ukraine") %>%
+  group_by(keypop) %>% 
+  summarise(cumulative = sum(cumulative), targets = sum(targets), 
+            .groups="drop") %>%
+  mutate(ach = scales::percent(cumulative/targets, accuracy = 0.1),
+         ) %>%
+  print()
+```
